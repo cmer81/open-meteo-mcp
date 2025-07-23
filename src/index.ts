@@ -293,10 +293,21 @@ class OpenMeteoMCPServer {
   }
 
   async run() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.error('Open-Meteo MCP Server running on stdio');
+  const mode = process.env.TRANSPORT || process.argv[2] || 'stdio';
+  console.error(`Starting Open-Meteo MCP Server with transport: ${mode}`);
+
+  let transport;
+  if (mode === 'http') {
+    const { HttpServerTransport } = await import('@modelcontextprotocol/sdk/server/http.js');
+    const port = parseInt(process.env.PORT || '8000', 10);
+    transport = new HttpServerTransport({ port });
+  } else {
+    transport = new StdioServerTransport();
   }
+
+  await this.server.connect(transport);
+  console.error(`Open-Meteo MCP Server running on ${mode}`);
+}
 }
 
 const server = new OpenMeteoMCPServer();
