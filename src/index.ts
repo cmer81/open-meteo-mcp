@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
+import express from 'express';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -66,7 +68,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'weather_archive': {
             const params = ArchiveParamsSchema.parse(args);
             const result = await this.client.getArchive(params);
@@ -79,7 +80,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'air_quality': {
             const params = AirQualityParamsSchema.parse(args);
             const result = await this.client.getAirQuality(params);
@@ -92,7 +92,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'marine_weather': {
             const params = MarineParamsSchema.parse(args);
             const result = await this.client.getMarine(params);
@@ -105,7 +104,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'elevation': {
             const params = ElevationParamsSchema.parse(args);
             const result = await this.client.getElevation(params);
@@ -118,7 +116,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'dwd_icon_forecast': {
             const params = ForecastParamsSchema.parse(args);
             const result = await this.client.getDwdIcon(params);
@@ -131,7 +128,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'gfs_forecast': {
             const params = ForecastParamsSchema.parse(args);
             const result = await this.client.getGfs(params);
@@ -144,7 +140,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'meteofrance_forecast': {
             const params = ForecastParamsSchema.parse(args);
             const result = await this.client.getMeteoFrance(params);
@@ -157,7 +152,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'ecmwf_forecast': {
             const params = ForecastParamsSchema.parse(args);
             const result = await this.client.getEcmwf(params);
@@ -170,7 +164,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'jma_forecast': {
             const params = ForecastParamsSchema.parse(args);
             const result = await this.client.getJma(params);
@@ -183,7 +176,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'metno_forecast': {
             const params = ForecastParamsSchema.parse(args);
             const result = await this.client.getMetno(params);
@@ -196,7 +188,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'gem_forecast': {
             const params = ForecastParamsSchema.parse(args);
             const result = await this.client.getGem(params);
@@ -209,7 +200,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'flood_forecast': {
             const params = FloodParamsSchema.parse(args);
             const result = await this.client.getFlood(params);
@@ -222,7 +212,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'seasonal_forecast': {
             const params = ForecastParamsSchema.parse(args);
             const result = await this.client.getSeasonal(params);
@@ -235,7 +224,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'climate_projection': {
             const params = ForecastParamsSchema.parse(args);
             const result = await this.client.getClimate(params);
@@ -248,9 +236,8 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'ensemble_forecast': {
-            const params = ForecastParamsSchema.parse(args); 
+            const params = ForecastParamsSchema.parse(args);
             const result = await this.client.getEnsemble(params);
             return {
               content: [
@@ -261,7 +248,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           case 'geocoding': {
             const params = GeocodingParamsSchema.parse(args);
             const result = await this.client.getGeocoding(params);
@@ -274,7 +260,6 @@ class OpenMeteoMCPServer {
               ],
             };
           }
-
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
@@ -293,9 +278,39 @@ class OpenMeteoMCPServer {
   }
 
   async run() {
-    const transport = new StdioServerTransport();
-    await this.server.connect(transport);
-    console.error('Open-Meteo MCP Server running on stdio');
+    const useHttp = process.env.TRANSPORT === 'http';
+
+    if (useHttp) {
+      // HTTP transport mode
+      const app = express();
+      app.use(express.json());
+
+      app.post('/mcp', async (req, res) => {
+        const transport = new StreamableHTTPServerTransport({
+          enableJsonResponse: true,
+        });
+
+        res.on('close', () => {
+          transport.close();
+        });
+
+        await this.server.connect(transport);
+        await transport.handleRequest(req, res, req.body);
+      });
+
+      const port = parseInt(process.env.PORT || '3000', 10);
+      app.listen(port, () => {
+        console.log(`Open-Meteo MCP HTTP Server running on http://0.0.0.0:${port}/mcp`);
+      }).on('error', (err) => {
+        console.error('HTTP server error:', err);
+        process.exit(1);
+      });
+    } else {
+      // STDIO transport fallback
+      const transport = new StdioServerTransport();
+      await this.server.connect(transport);
+      console.error('Open-Meteo MCP Server running on stdio');
+    }
   }
 }
 
