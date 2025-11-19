@@ -21,11 +21,16 @@ import {
 } from './types.js';
 
 class OpenMeteoMCPServer {
-  private server: Server;
   private client: OpenMeteoClient;
+  private sessionServers: Map<string, { server: Server; transport: StreamableHTTPServerTransport }> = new Map();
 
   constructor() {
-    this.server = new Server(
+    const baseURL = process.env.OPEN_METEO_API_URL || 'https://api.open-meteo.com';
+    this.client = new OpenMeteoClient(baseURL);
+  }
+
+  private createServer(): Server {
+    const server = new Server(
       {
         name: 'open-meteo-mcp-server',
         version: '1.0.0',
@@ -37,17 +42,12 @@ class OpenMeteoMCPServer {
       }
     );
 
-    const baseURL = process.env.OPEN_METEO_API_URL || 'https://api.open-meteo.com';
-    this.client = new OpenMeteoClient(baseURL);
-    this.setupHandlers();
-  }
-
-  private setupHandlers() {
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    // Setup handlers for this server instance
+    server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: ALL_TOOLS,
     }));
 
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
       try {
         switch (name) {
@@ -94,6 +94,32 @@ class OpenMeteoMCPServer {
         return { content: [{ type: 'text', text: `Error: ${message}` }] };
       }
     });
+
+    return server;
+  }
+
+  private async getOrCreateSession(sessionId: string): Promise<{ server: Server; transport: StreamableHTTPServerTransport }> {
+    if (this.sessionServers.has(sessionId)) {
+      return this.sessionServers.get(sessionId)!;
+    }
+
+    // Create new server and transport for this session
+    const server = this.createServer();
+    const sessionIdGenerator = () => sessionId;
+    
+    const transport = new StreamableHTTPServerTransport({
+      enableJsonResponse: true,
+      sessionIdGenerator: sessionIdGenerator,
+    });
+
+    server.oninitialized = () => {
+      console.log(`✅ MCP server session ${sessionId.substring(0, 8)}... initialized and ready.`);
+    };
+
+    await server.connect(transport);
+    
+    this.sessionServers.set(sessionId, { server, transport });
+    return { server, transport };
   }
 
   async run() {
@@ -126,25 +152,78 @@ class OpenMeteoMCPServer {
         next();
       });
 
-      const transport = new StreamableHTTPServerTransport({
-        enableJsonResponse: true,
-        sessionIdGenerator: () => Math.random().toString(36).substring(2),
-      });
-
-      // Optional log when initialized
-      this.server.oninitialized = () => {
-        console.log("✅ MCP server initialized and ready.");
+      // Generate unique session IDs for each client
+      const sessionIdGenerator = () => {
+        const timestamp = Date.now().toString(36);
+        const random1 = Math.random().toString(36).substring(2, 15);
+        const random2 = Math.random().toString(36).substring(2, 15);
+        const random3 = Math.random().toString(36).substring(2, 15);
+        return `${timestamp}-${random1}-${random2}-${random3}`;
       };
-
-      // Connect (this implicitly initializes)
-      await this.server.connect(transport);
 
       app.post('/mcp', async (req, res) => {
         try {
-          await transport.handleRequest(req, res, req.body);
+          // Extract session ID from headers
+          let sessionId = (req.headers['mcp-session-id'] || 
+                          req.headers['Mcp-Session-Id']) as string | undefined;
+          
+          // If no session ID and it's an initialize request, create a new session
+          if (!sessionId && req.body?.method === 'initialize') {
+            // Generate a new session ID
+            const newSessionId = sessionIdGenerator();
+            
+            // Create server and transport for this new session
+            const server = this.createServer();
+            const transport = new StreamableHTTPServerTransport({
+              enableJsonResponse: true,
+              sessionIdGenerator: () => newSessionId, // Always return the same ID for this session
+            });
+            
+            server.oninitialized = () => {
+              console.log(`✅ New MCP server session ${newSessionId.substring(0, 8)}... initialized.`);
+            };
+            
+            await server.connect(transport);
+            
+            // Store the session
+            this.sessionServers.set(newSessionId, { server, transport });
+            
+            // Set session ID in response header before handling request
+            res.setHeader('mcp-session-id', newSessionId);
+            
+            // Handle the initialize request
+            await transport.handleRequest(req, res, req.body);
+            return;
+          }
+          
+          if (sessionId) {
+            console.log(`[Session ${sessionId.substring(0, 8)}...] Handling request`);
+            // Get or create session (should already exist if sessionId is provided)
+            const { transport } = await this.getOrCreateSession(sessionId);
+            await transport.handleRequest(req, res, req.body);
+          } else {
+            // No session ID and not an initialize request - error
+            res.status(400).json({
+              jsonrpc: '2.0',
+              error: {
+                code: -32600,
+                message: 'Invalid Request: Session ID required for non-initialize requests'
+              },
+              id: req.body?.id || null
+            });
+          }
         } catch (err) {
           console.error('Request handling error:', err);
-          res.status(500).json({ error: 'Internal server error' });
+          
+          const errorMessage = err instanceof Error ? err.message : String(err);
+          res.status(500).json({ 
+            jsonrpc: '2.0',
+            error: { 
+              code: -32603, 
+              message: 'Internal error: ' + errorMessage 
+            },
+            id: req.body?.id || null
+          });
         }
       });
 
@@ -156,11 +235,13 @@ class OpenMeteoMCPServer {
         process.exit(1);
       });
     } else {
+      // For stdio mode, create a single server instance
+      const server = this.createServer();
       const transport = new StdioServerTransport();
-      this.server.oninitialized = () => {
+      server.oninitialized = () => {
         console.log("✅ MCP server initialized and ready (stdio).");
       };
-      await this.server.connect(transport);
+      await server.connect(transport);
       console.error('✅ Open-Meteo MCP Server running on stdio');
     }
   }
