@@ -49,48 +49,66 @@ class OpenMeteoMCPServer {
 
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
+      const timestamp = new Date().toISOString();
+      
+      // Log tool call with payload
+      console.log(`[${timestamp}] 🔧 TOOL CALLED: ${name}`);
+      console.log(`[${timestamp}] 📥 PAYLOAD RECEIVED:`, JSON.stringify(args, null, 2));
+      
       try {
+        let result: any;
         switch (name) {
           case 'weather_forecast': {
             const params = ForecastParamsSchema.parse(args);
-            const result = await this.client.getForecast(params);
-            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+            result = await this.client.getForecast(params);
+            break;
           }
           case 'weather_archive': {
             const params = ArchiveParamsSchema.parse(args);
-            const result = await this.client.getArchive(params);
-            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+            result = await this.client.getArchive(params);
+            break;
           }
           case 'air_quality': {
             const params = AirQualityParamsSchema.parse(args);
-            const result = await this.client.getAirQuality(params);
-            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+            result = await this.client.getAirQuality(params);
+            break;
           }
           case 'marine_weather': {
             const params = MarineParamsSchema.parse(args);
-            const result = await this.client.getMarine(params);
-            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+            result = await this.client.getMarine(params);
+            break;
           }
           case 'elevation': {
             const params = ElevationParamsSchema.parse(args);
-            const result = await this.client.getElevation(params);
-            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+            result = await this.client.getElevation(params);
+            break;
           }
           case 'flood_forecast': {
             const params = FloodParamsSchema.parse(args);
-            const result = await this.client.getFlood(params);
-            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+            result = await this.client.getFlood(params);
+            break;
           }
           case 'geocoding': {
             const params = GeocodingParamsSchema.parse(args);
-            const result = await this.client.getGeocoding(params);
-            return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+            result = await this.client.getGeocoding(params);
+            break;
           }
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
+        
+        const responseText = JSON.stringify(result, null, 2);
+        // Log response (truncated if too long)
+        const responsePreview = responseText.length > 500 
+          ? responseText.substring(0, 500) + '... [truncated]'
+          : responseText;
+        console.log(`[${timestamp}] 📤 RESPONSE SENT:`, responsePreview);
+        console.log(`[${timestamp}] ✅ TOOL ${name} COMPLETED SUCCESSFULLY`);
+        
+        return { content: [{ type: 'text', text: responseText }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
+        console.error(`[${timestamp}] ❌ TOOL ${name} FAILED:`, message);
         return { content: [{ type: 'text', text: `Error: ${message}` }] };
       }
     });
