@@ -50,11 +50,11 @@ class OpenMeteoMCPServer {
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
       const timestamp = new Date().toISOString();
-      
+
       // Log tool call with payload
       console.log(`[${timestamp}] 🔧 TOOL CALLED: ${name}`);
       console.log(`[${timestamp}] 📥 PAYLOAD RECEIVED:`, JSON.stringify(args, null, 2));
-      
+
       try {
         let result: any;
         switch (name) {
@@ -96,15 +96,15 @@ class OpenMeteoMCPServer {
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
-        
+
         const responseText = JSON.stringify(result, null, 2);
         // Log response (truncated if too long)
-        const responsePreview = responseText.length > 500 
+        const responsePreview = responseText.length > 500
           ? responseText.substring(0, 500) + '... [truncated]'
           : responseText;
         console.log(`[${timestamp}] 📤 RESPONSE SENT:`, responsePreview);
         console.log(`[${timestamp}] ✅ TOOL ${name} COMPLETED SUCCESSFULLY`);
-        
+
         return { content: [{ type: 'text', text: responseText }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
@@ -124,7 +124,7 @@ class OpenMeteoMCPServer {
     // Create new server and transport for this session
     const server = this.createServer();
     const sessionIdGenerator = () => sessionId;
-    
+
     const transport = new StreamableHTTPServerTransport({
       enableJsonResponse: true,
       sessionIdGenerator: sessionIdGenerator,
@@ -135,7 +135,7 @@ class OpenMeteoMCPServer {
     };
 
     await server.connect(transport);
-    
+
     this.sessionServers.set(sessionId, { server, transport });
     return { server, transport };
   }
@@ -182,40 +182,42 @@ class OpenMeteoMCPServer {
       app.post('/mcp', async (req, res) => {
         try {
           // Extract session ID from headers
-          let sessionId = (req.headers['mcp-session-id'] || 
-                          req.headers['Mcp-Session-Id']) as string | undefined;
-          
+          let sessionId = (req.headers['mcp-session-id'] ||
+            req.headers['Mcp-Session-Id']) as string | undefined;
+
           // If no session ID and it's an initialize request, create a new session
           if (!sessionId && req.body?.method === 'initialize') {
+            console.log(`[Request] Initialize request received, creating new session`);
             // Generate a new session ID
             const newSessionId = sessionIdGenerator();
-            
+
             // Create server and transport for this new session
             const server = this.createServer();
             const transport = new StreamableHTTPServerTransport({
               enableJsonResponse: true,
               sessionIdGenerator: () => newSessionId, // Always return the same ID for this session
             });
-            
+
             server.oninitialized = () => {
               console.log(`✅ New MCP server session ${newSessionId.substring(0, 8)}... initialized.`);
             };
-            
+
             await server.connect(transport);
-            
+
             // Store the session
             this.sessionServers.set(newSessionId, { server, transport });
-            
+
             // Set session ID in response header before handling request
             res.setHeader('mcp-session-id', newSessionId);
-            
+
             // Handle the initialize request
             await transport.handleRequest(req, res, req.body);
             return;
           }
-          
+
           if (sessionId) {
-            console.log(`[Session ${sessionId.substring(0, 8)}...] Handling request`);
+            const method = req.body?.method || 'unknown';
+            console.log(`[Session ${sessionId.substring(0, 8)}...] Handling request - Method: ${method}`);
             // Get or create session (should already exist if sessionId is provided)
             const { transport } = await this.getOrCreateSession(sessionId);
             await transport.handleRequest(req, res, req.body);
@@ -232,13 +234,13 @@ class OpenMeteoMCPServer {
           }
         } catch (err) {
           console.error('Request handling error:', err);
-          
+
           const errorMessage = err instanceof Error ? err.message : String(err);
-          res.status(500).json({ 
+          res.status(500).json({
             jsonrpc: '2.0',
-            error: { 
-              code: -32603, 
-              message: 'Internal error: ' + errorMessage 
+            error: {
+              code: -32603,
+              message: 'Internal error: ' + errorMessage
             },
             id: req.body?.id || null
           });
