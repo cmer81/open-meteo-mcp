@@ -643,7 +643,7 @@ export const ENSEMBLE_FORECAST_TOOL: Tool = {
 
 export const GEOCODING_TOOL: Tool = {
   name: 'geocoding',
-  description: 'Search for locations worldwide by place name or postal code. Returns geographic coordinates and detailed location information.',
+  description: 'Search for locations worldwide by place name or postal code. Returns geographic coordinates (latitude and longitude) and detailed location information. Use this tool when you need to convert a location name (e.g., "Paris", "New York") into precise coordinates (latitude/longitude) that are required by other tools. This is essential when you have a location name but need coordinates for data fetching tools.',
   inputSchema: {
     type: 'object',
     properties: {
