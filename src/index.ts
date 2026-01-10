@@ -60,7 +60,7 @@ class OpenMeteoMCPServer {
       console.log(`[${timestamp}] Processing tool execution...`);
 
       try {
-        let result: any;
+        let result: unknown;
         switch (name) {
           case 'weather_forecast': {
             const params = ForecastParamsSchema.parse(args);
@@ -203,7 +203,7 @@ class OpenMeteoMCPServer {
           console.log(`[${timestamp}] Full Request Body:`, JSON.stringify(req.body, null, 2));
 
           // Extract session ID from headers
-          let sessionId = (req.headers['mcp-session-id'] ||
+          const sessionId = (req.headers['mcp-session-id'] ||
             req.headers['Mcp-Session-Id']) as string | undefined;
           console.log(`[${timestamp}] Session ID: ${sessionId || 'NONE'}`);
 
