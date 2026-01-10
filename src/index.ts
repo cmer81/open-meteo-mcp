@@ -4,6 +4,7 @@ import express from 'express';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
@@ -146,7 +147,7 @@ class OpenMeteoMCPServer {
       console.log(`✅ MCP server session ${sessionId.substring(0, 8)}... initialized and ready.`);
     };
 
-    await server.connect(transport);
+    await server.connect(transport as Transport);
 
     this.sessionServers.set(sessionId, { server, transport });
     return { server, transport };
@@ -223,7 +224,7 @@ class OpenMeteoMCPServer {
               console.log(`✅ New MCP server session ${newSessionId.substring(0, 8)}... initialized.`);
             };
 
-            await server.connect(transport);
+            await server.connect(transport as Transport);
 
             // Store the session
             this.sessionServers.set(newSessionId, { server, transport });
@@ -301,7 +302,7 @@ class OpenMeteoMCPServer {
       server.oninitialized = () => {
         console.log("✅ MCP server initialized and ready (stdio).");
       };
-      await server.connect(transport);
+      await server.connect(transport as Transport);
       console.error('✅ Open-Meteo MCP Server running on stdio');
     }
   }
