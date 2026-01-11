@@ -44,7 +44,32 @@ No installation required! The server will run directly via npx.
 npm install -g open-meteo-mcp-server
 ```
 
-### Method 3: From Source (Development)
+### Method 3: Docker (Recommended for HTTP mode)
+
+```bash
+# Clone the repository
+git clone https://github.com/cmer81/open-meteo-mcp.git
+cd open-meteo-mcp
+
+# Start with Docker Compose
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop
+docker compose down
+```
+
+The server will be available at `http://localhost:3000/mcp`.
+
+To customize the port, create a `.env` file or set `MCP_PORT`:
+
+```bash
+MCP_PORT=8080 docker compose up -d
+```
+
+### Method 4: From Source (Development)
 
 ```bash
 # Clone the repository
@@ -59,6 +84,37 @@ npm run build
 ```
 
 ## Configuration
+
+### Quick Start with mcp.json
+
+The repository includes an `mcp.json` with both stdio and HTTP server configurations:
+
+```json
+{
+  "mcpServers": {
+    "open-meteo-http": {
+      "type": "http",
+      "url": "http://127.0.0.1:3000/mcp"
+    },
+    "open-meteo": {
+      "command": "npx",
+      "args": ["open-meteo-mcp-server"],
+      "env": {
+        "OPEN_METEO_API_URL": "https://api.open-meteo.com",
+        "OPEN_METEO_AIR_QUALITY_API_URL": "https://air-quality-api.open-meteo.com",
+        "OPEN_METEO_MARINE_API_URL": "https://marine-api.open-meteo.com",
+        "OPEN_METEO_ARCHIVE_API_URL": "https://archive-api.open-meteo.com",
+        "OPEN_METEO_SEASONAL_API_URL": "https://seasonal-api.open-meteo.com",
+        "OPEN_METEO_ENSEMBLE_API_URL": "https://ensemble-api.open-meteo.com",
+        "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.open-meteo.com"
+      }
+    }
+  }
+}
+```
+
+- **open-meteo-http** - HTTP transport (requires server running via Docker or `npm run start:http`)
+- **open-meteo** - Stdio transport via npx (launches on demand)
 
 ### Claude Desktop Configuration
 
@@ -158,6 +214,85 @@ All environment variables are optional and have sensible defaults:
 - `OPEN_METEO_SEASONAL_API_URL` - Seasonal forecast API URL (default: https://seasonal-api.open-meteo.com)
 - `OPEN_METEO_ENSEMBLE_API_URL` - Ensemble forecast API URL (default: https://ensemble-api.open-meteo.com)
 - `OPEN_METEO_GEOCODING_API_URL` - Geocoding API URL (default: https://geocoding-api.open-meteo.com)
+
+### Transport Mode
+
+The server supports two transport modes:
+
+- **stdio** (default) - Standard input/output transport for use with MCP clients like Claude Desktop
+- **http** - HTTP transport with Server-Sent Events (SSE) for web-based integrations
+
+#### HTTP Transport Configuration
+
+To run in HTTP mode, set the `MCP_TRANSPORT` environment variable:
+
+```bash
+# Start server in HTTP mode
+MCP_TRANSPORT=http npm start
+
+# Or use the convenience script
+npm run start:http
+```
+
+#### HTTP Environment Variables
+
+Create a `.env` file in the project root to configure HTTP mode (see `.env.example`):
+
+```env
+# Transport Configuration
+MCP_TRANSPORT=http
+MCP_HOST=127.0.0.1
+MCP_PORT=3000
+
+# Optional: Custom Open-Meteo API endpoints
+# OPEN_METEO_API_URL=https://api.open-meteo.com
+# OPEN_METEO_AIR_QUALITY_API_URL=https://air-quality-api.open-meteo.com
+# OPEN_METEO_MARINE_API_URL=https://marine-api.open-meteo.com
+# OPEN_METEO_ARCHIVE_API_URL=https://archive-api.open-meteo.com
+# OPEN_METEO_SEASONAL_API_URL=https://seasonal-api.open-meteo.com
+# OPEN_METEO_ENSEMBLE_API_URL=https://ensemble-api.open-meteo.com
+# OPEN_METEO_GEOCODING_API_URL=https://geocoding-api.open-meteo.com
+```
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MCP_TRANSPORT` | Transport mode: `stdio` or `http` | `stdio` |
+| `MCP_HOST` | HTTP server bind address | `127.0.0.1` |
+| `MCP_PORT` | HTTP server port | `3000` |
+
+> **Note:** When binding to `0.0.0.0` (all interfaces), the server will warn about DNS rebinding protection. For production deployments, consider using authentication or a reverse proxy.
+
+#### HTTP Endpoints
+
+When running in HTTP mode, the server exposes:
+
+- `POST /mcp` - MCP JSON-RPC endpoint (Streamable HTTP with SSE)
+- `GET /mcp` - SSE stream for server-initiated messages
+- `GET /health` - Health check endpoint
+
+#### HTTP Client Example
+
+```bash
+# Health check
+curl http://127.0.0.1:3000/health
+
+# Initialize MCP session
+curl -X POST http://127.0.0.1:3000/mcp \
+  -H "Content-Type: application/json" \
+  -H "Accept: application/json, text/event-stream" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "protocolVersion": "2024-11-05",
+      "capabilities": {},
+      "clientInfo": {"name": "my-client", "version": "1.0.0"}
+    }
+  }'
+```
+
+The server uses session-based stateful connections. After initialization, include the `mcp-session-id` header from the response in subsequent requests.
 
 ## Usage Examples
 
@@ -271,14 +406,20 @@ Show me temperature projections for New York from 2050 to 2070 using CMIP6 model
 ## Development Scripts
 
 ```bash
-# Development with auto-reload
+# Development with auto-reload (stdio mode)
 npm run dev
+
+# Development with auto-reload (HTTP mode)
+npm run dev:http
 
 # Build TypeScript
 npm run build
 
-# Start production server
+# Start production server (stdio mode)
 npm start
+
+# Start production server (HTTP mode)
+npm run start:http
 
 # Run tests
 npm test
