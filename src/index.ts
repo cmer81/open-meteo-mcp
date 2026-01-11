@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 
+import 'dotenv/config';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { createMcpExpressApp } from '@modelcontextprotocol/sdk/server/express.js';
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
+import { randomUUID } from 'crypto';
 import { OpenMeteoClient } from './client.js';
 import { ALL_TOOLS } from './tools.js';
 import {
@@ -250,7 +254,7 @@ class OpenMeteoMCPServer {
           }
 
           case 'ensemble_forecast': {
-            const params = ForecastParamsSchema.parse(args); 
+            const params = ForecastParamsSchema.parse(args);
             const result = await this.client.getEnsemble(params);
             return {
               content: [
@@ -292,10 +296,98 @@ class OpenMeteoMCPServer {
     });
   }
 
-  async run() {
+  async runStdio() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
     console.error('Open-Meteo MCP Server running on stdio');
+  }
+
+  async runHttp() {
+    const host = process.env.MCP_HOST || '127.0.0.1';
+    const port = parseInt(process.env.MCP_PORT || '3000', 10);
+
+    // Create express app with MCP security middleware
+    const app = createMcpExpressApp({ host });
+
+    // Store active transports for session management
+    const transports = new Map<string, StreamableHTTPServerTransport>();
+
+    // Handle MCP requests at /mcp endpoint
+    app.all('/mcp', async (req, res) => {
+      // For new sessions, create a new transport
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
+      let transport: StreamableHTTPServerTransport;
+
+      if (sessionId && transports.has(sessionId)) {
+        // Reuse existing transport for this session
+        transport = transports.get(sessionId)!;
+      } else if (!sessionId && req.method === 'POST') {
+        // New session - create transport with session ID generator
+        transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+        });
+
+        // Connect the server to this transport
+        await this.server.connect(transport);
+
+        // Store the transport after handling to get the session ID
+        transport.onclose = () => {
+          const sid = transport.sessionId;
+          if (sid) {
+            transports.delete(sid);
+          }
+        };
+
+        // We'll store it after handling since sessionId is set during first request
+        await transport.handleRequest(req, res, req.body);
+
+        // Now store the transport with its session ID
+        if (transport.sessionId) {
+          transports.set(transport.sessionId, transport);
+        }
+        return;
+      } else if (!sessionId && req.method === 'GET') {
+        // SSE connection without session - create stateless transport
+        transport = new StreamableHTTPServerTransport({});
+        await this.server.connect(transport);
+        await transport.handleRequest(req, res, req.body);
+        return;
+      } else {
+        // Invalid request - session ID provided but not found
+        res.status(400).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32600,
+            message: 'Invalid session ID',
+          },
+          id: null,
+        });
+        return;
+      }
+
+      await transport.handleRequest(req, res, req.body);
+    });
+
+    // Health check endpoint
+    app.get('/health', (_req, res) => {
+      res.json({ status: 'ok', server: 'open-meteo-mcp-server' });
+    });
+
+    // Start the server
+    app.listen(port, host, () => {
+      console.error(`Open-Meteo MCP Server running on http://${host}:${port}/mcp`);
+    });
+  }
+
+  async run() {
+    const transport = process.env.MCP_TRANSPORT || 'stdio';
+
+    if (transport === 'http') {
+      await this.runHttp();
+    } else {
+      await this.runStdio();
+    }
   }
 }
 
