@@ -82,6 +82,8 @@ jspm_packages/
 
 # Claude/MCP specific
 .claude/
+.agents/
+.cursor/
 .mcp.json
 
 # IDE files
