@@ -300,7 +300,7 @@ class OpenMeteoMCPServer {
       const server = this.createServer();
       const transport = new StdioServerTransport();
       server.oninitialized = () => {
-        console.log("✅ MCP server initialized and ready (stdio).");
+        console.error("✅ MCP server initialized and ready (stdio).");
       };
       await server.connect(transport as Transport);
       console.error('✅ Open-Meteo MCP Server running on stdio');
