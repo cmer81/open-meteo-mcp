@@ -18,6 +18,7 @@ services:
       # - OPEN_METEO_ENSEMBLE_API_URL=https://ensemble-api.open-meteo.com
       # - OPEN_METEO_GEOCODING_API_URL=https://geocoding-api.open-meteo.com
       # - OPEN_METEO_FLOOD_API_URL=https://flood-api.open-meteo.com
+      # - OPEN_METEO_CLIMATE_API_URL=https://climate-api.open-meteo.com
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"]

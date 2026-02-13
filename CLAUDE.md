@@ -77,6 +77,7 @@ The server uses environment variables for API endpoints with fallback defaults:
 - `OPEN_METEO_ENSEMBLE_API_URL` - Ensemble forecasts
 - `OPEN_METEO_GEOCODING_API_URL` - Geocoding service
 - `OPEN_METEO_FLOOD_API_URL` - Flood forecast service
+- `OPEN_METEO_CLIMATE_API_URL` - Climate projection service
 
 Transport configuration:
 - `TRANSPORT` - Set to `http` to enable Streamable HTTP mode (default: stdio)

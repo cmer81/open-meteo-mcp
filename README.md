@@ -98,7 +98,8 @@ Add the following configuration to your Claude Desktop config file:
         "OPEN_METEO_SEASONAL_API_URL": "https://seasonal-api.open-meteo.com",
         "OPEN_METEO_ENSEMBLE_API_URL": "https://ensemble-api.open-meteo.com",
         "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.open-meteo.com",
-        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.open-meteo.com"
+        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.open-meteo.com",
+        "OPEN_METEO_CLIMATE_API_URL": "https://climate-api.open-meteo.com"
       }
     }
   }
@@ -123,7 +124,8 @@ If you're developing locally or installed from source:
         "OPEN_METEO_SEASONAL_API_URL": "https://seasonal-api.open-meteo.com",
         "OPEN_METEO_ENSEMBLE_API_URL": "https://ensemble-api.open-meteo.com",
         "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.open-meteo.com",
-        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.open-meteo.com"
+        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.open-meteo.com",
+        "OPEN_METEO_CLIMATE_API_URL": "https://climate-api.open-meteo.com"
       }
     }
   }
@@ -278,6 +280,7 @@ All environment variables are optional and have sensible defaults:
 - `OPEN_METEO_ENSEMBLE_API_URL` - Ensemble forecast API URL (default: https://ensemble-api.open-meteo.com)
 - `OPEN_METEO_GEOCODING_API_URL` - Geocoding API URL (default: https://geocoding-api.open-meteo.com)
 - `OPEN_METEO_FLOOD_API_URL` - Flood forecast API URL (default: https://flood-api.open-meteo.com)
+- `OPEN_METEO_CLIMATE_API_URL` - Climate projection API URL (default: https://climate-api.open-meteo.com)
 - `TRANSPORT` - Transport mode: `http` for Streamable HTTP, omit for stdio (default: stdio)
 - `PORT` - HTTP server port when using HTTP transport (default: 3000)
 

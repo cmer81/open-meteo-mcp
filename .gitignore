@@ -81,8 +81,7 @@ jspm_packages/
 .vscode-test
 
 # Claude/MCP specific
-.claude/
-.agents/
+.claude/settings.local.json
 .cursor/
 .mcp.json
 
