@@ -1,11 +1,9 @@
 services:
   open-meteo-mcp:
-    image: ghcr.io/cmer81/open-meteo-mcp:latest
-    # Uncomment to build from source instead:
-    # build:
-    #   context: .
-    #   dockerfile: Dockerfile
-    container_name: open-meteo-mcp-server
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: open-meteo-mcp-server-dev
     ports:
       - "3000:3000"
     environment:
