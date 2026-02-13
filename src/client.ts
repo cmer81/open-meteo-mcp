@@ -24,6 +24,7 @@ export class OpenMeteoClient {
   private ensembleClient: AxiosInstance;
   private geocodingClient: AxiosInstance;
   private floodClient: AxiosInstance;
+  private climateClient: AxiosInstance;
 
   constructor(baseURL: string = process.env.OPEN_METEO_API_URL || 'https://api.open-meteo.com') {
     const config = {
@@ -42,6 +43,7 @@ export class OpenMeteoClient {
     const ensembleURL = process.env.OPEN_METEO_ENSEMBLE_API_URL || 'https://ensemble-api.open-meteo.com';
     const geocodingURL = process.env.OPEN_METEO_GEOCODING_API_URL || 'https://geocoding-api.open-meteo.com';
     const floodURL = process.env.OPEN_METEO_FLOOD_API_URL || 'https://flood-api.open-meteo.com';
+    const climateURL = process.env.OPEN_METEO_CLIMATE_API_URL || 'https://climate-api.open-meteo.com';
 
     this.client = axios.create({ baseURL, ...config });
     this.airQualityClient = axios.create({ baseURL: airQualityURL, ...config });
@@ -51,6 +53,7 @@ export class OpenMeteoClient {
     this.ensembleClient = axios.create({ baseURL: ensembleURL, ...config });
     this.geocodingClient = axios.create({ baseURL: geocodingURL, ...config });
     this.floodClient = axios.create({ baseURL: floodURL, ...config });
+    this.climateClient = axios.create({ baseURL: climateURL, ...config });
   }
 
   private buildParams(params: Record<string, unknown>): Record<string, string> {
@@ -175,7 +178,7 @@ export class OpenMeteoClient {
   }
 
   async getClimate(params: ClimateParams): Promise<WeatherResponse> {
-    const response = await this.client.get('/v1/climate', {
+    const response = await this.climateClient.get('/v1/climate', {
       params: this.buildParams(params)
     });
     return response.data;
