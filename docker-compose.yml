@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  open-meteo-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: open-meteo-mcp-server
+    ports:
+      - "3000:3000"
+    environment:
+      - TRANSPORT=http
+      - PORT=3000
+      # Override API URLs if needed
+      # - OPEN_METEO_API_URL=https://api.open-meteo.com
+      # - OPEN_METEO_AIR_QUALITY_API_URL=https://air-quality-api.open-meteo.com
+      # - OPEN_METEO_MARINE_API_URL=https://marine-api.open-meteo.com
+      # - OPEN_METEO_ARCHIVE_API_URL=https://archive-api.open-meteo.com
+      # - OPEN_METEO_SEASONAL_API_URL=https://seasonal-api.open-meteo.com
+      # - OPEN_METEO_ENSEMBLE_API_URL=https://ensemble-api.open-meteo.com
+      # - OPEN_METEO_GEOCODING_API_URL=https://geocoding-api.open-meteo.com
+      # - OPEN_METEO_FLOOD_API_URL=https://flood-api.open-meteo.com
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1));"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3

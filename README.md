@@ -164,6 +164,69 @@ TRANSPORT=http PORT=3000 npx open-meteo-mcp-server
 
 This starts an Express server on the specified port (default: 3000) with the MCP endpoint at `/mcp`. The HTTP transport supports session management with unique session IDs per client.
 
+#### Using npm scripts
+
+```bash
+# Start in HTTP mode (production)
+npm run start:http
+
+# Development with auto-reload in HTTP mode
+npm run dev:http
+```
+
+### Docker Deployment
+
+The server can be easily deployed using Docker:
+
+#### Using Docker Compose (Recommended)
+
+```bash
+# Start the server
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop the server
+docker compose down
+```
+
+#### Using Docker directly
+
+```bash
+# Build the image
+npm run docker:build
+# or
+docker build -t open-meteo-mcp-server .
+
+# Run the container
+npm run docker:run
+# or
+docker run -p 3000:3000 open-meteo-mcp-server
+```
+
+#### Environment Configuration
+
+Copy `.env.example` to `.env` and customize as needed:
+
+```bash
+cp .env.example .env
+# Edit .env with your configuration
+```
+
+Then update `docker-compose.yml` to use the `.env` file or pass environment variables directly.
+
+#### Health Check
+
+The HTTP server includes a health check endpoint:
+
+```bash
+curl http://localhost:3000/health
+# Response: {"status":"ok"}
+```
+
+This endpoint is used by Docker's `HEALTHCHECK` and can be integrated with container orchestration platforms (Kubernetes, Docker Swarm, etc.).
+
 ### Environment Variables
 
 All environment variables are optional and have sensible defaults:
