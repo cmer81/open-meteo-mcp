@@ -19,18 +19,26 @@ This is an Open-Meteo MCP (Model Context Protocol) server that provides comprehe
 
 The `OpenMeteoClient` class manages separate Axios instances for different Open-Meteo services:
 - Main forecast API (`api.open-meteo.com`)
-- Air quality API (`air-quality-api.open-meteo.com`) 
+- Air quality API (`air-quality-api.open-meteo.com`)
 - Marine weather API (`marine-api.open-meteo.com`)
 - Archive/historical API (`archive-api.open-meteo.com`)
 - Seasonal forecast API (`seasonal-api.open-meteo.com`)
 - Ensemble forecast API (`ensemble-api.open-meteo.com`)
+- Geocoding API (`geocoding-api.open-meteo.com`)
+- Flood API (`flood-api.open-meteo.com`)
 
 Each service can be configured via environment variables with sensible defaults.
+
+### Transport Modes
+
+The server supports two transport modes (configured via `TRANSPORT` env var):
+- **stdio** (default) - Standard input/output for direct MCP client integration (Claude Desktop, etc.)
+- **Streamable HTTP** (`TRANSPORT=http`) - Express-based HTTP server with session management, listening on `PORT` (default: 3000) at `/mcp` endpoint
 
 ### Tool System
 
 Tools are organized by weather service type:
-- **Core weather tools**: `weather_forecast`, `weather_archive`, `air_quality`, `marine_weather`, `elevation`
+- **Core weather tools**: `weather_forecast`, `weather_archive`, `air_quality`, `marine_weather`, `elevation`, `geocoding`
 - **Specialized model tools**: `dwd_icon_forecast`, `gfs_forecast`, `meteofrance_forecast`, `ecmwf_forecast`, `jma_forecast`, `metno_forecast`, `gem_forecast`
 - **Advanced forecasting**: `flood_forecast`, `seasonal_forecast`, `climate_projection`, `ensemble_forecast`
 
@@ -67,6 +75,12 @@ The server uses environment variables for API endpoints with fallback defaults:
 - `OPEN_METEO_ARCHIVE_API_URL` - Historical data service
 - `OPEN_METEO_SEASONAL_API_URL` - Seasonal forecasts
 - `OPEN_METEO_ENSEMBLE_API_URL` - Ensemble forecasts
+- `OPEN_METEO_GEOCODING_API_URL` - Geocoding service
+- `OPEN_METEO_FLOOD_API_URL` - Flood forecast service
+
+Transport configuration:
+- `TRANSPORT` - Set to `http` to enable Streamable HTTP mode (default: stdio)
+- `PORT` - HTTP server port when using HTTP transport (default: 3000)
 
 ## Key Implementation Patterns
 

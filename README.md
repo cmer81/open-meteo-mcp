@@ -34,6 +34,10 @@ This MCP server provides complete access to Open-Meteo APIs, including:
 
 ## Installation
 
+### Requirements
+
+- Node.js >= 22.0.0
+
 ### Method 1: Using npx (Recommended)
 
 No installation required! The server will run directly via npx.
@@ -92,7 +96,8 @@ Add the following configuration to your Claude Desktop config file:
         "OPEN_METEO_ARCHIVE_API_URL": "https://archive-api.open-meteo.com",
         "OPEN_METEO_SEASONAL_API_URL": "https://seasonal-api.open-meteo.com",
         "OPEN_METEO_ENSEMBLE_API_URL": "https://ensemble-api.open-meteo.com",
-        "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.open-meteo.com"
+        "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.open-meteo.com",
+        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.open-meteo.com"
       }
     }
   }
@@ -116,7 +121,8 @@ If you're developing locally or installed from source:
         "OPEN_METEO_ARCHIVE_API_URL": "https://archive-api.open-meteo.com",
         "OPEN_METEO_SEASONAL_API_URL": "https://seasonal-api.open-meteo.com",
         "OPEN_METEO_ENSEMBLE_API_URL": "https://ensemble-api.open-meteo.com",
-        "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.open-meteo.com"
+        "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.open-meteo.com",
+        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.open-meteo.com"
       }
     }
   }
@@ -131,7 +137,7 @@ If you're using your own Open-Meteo instance:
 {
   "mcpServers": {
     "open-meteo": {
-      "command": "npx", 
+      "command": "npx",
       "args": ["open-meteo-mcp-server"],
       "env": {
         "OPEN_METEO_API_URL": "https://your-meteo-api.example.com",
@@ -140,12 +146,23 @@ If you're using your own Open-Meteo instance:
         "OPEN_METEO_ARCHIVE_API_URL": "https://archive-api.example.com",
         "OPEN_METEO_SEASONAL_API_URL": "https://seasonal-api.example.com",
         "OPEN_METEO_ENSEMBLE_API_URL": "https://ensemble-api.example.com",
-        "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.example.com"
+        "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.example.com",
+        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.example.com"
       }
     }
   }
 }
 ```
+
+### Streamable HTTP Transport
+
+The server also supports Streamable HTTP transport for remote deployments. Set the `TRANSPORT` environment variable to `http`:
+
+```bash
+TRANSPORT=http PORT=3000 npx open-meteo-mcp-server
+```
+
+This starts an Express server on the specified port (default: 3000) with the MCP endpoint at `/mcp`. The HTTP transport supports session management with unique session IDs per client.
 
 ### Environment Variables
 
@@ -158,6 +175,9 @@ All environment variables are optional and have sensible defaults:
 - `OPEN_METEO_SEASONAL_API_URL` - Seasonal forecast API URL (default: https://seasonal-api.open-meteo.com)
 - `OPEN_METEO_ENSEMBLE_API_URL` - Ensemble forecast API URL (default: https://ensemble-api.open-meteo.com)
 - `OPEN_METEO_GEOCODING_API_URL` - Geocoding API URL (default: https://geocoding-api.open-meteo.com)
+- `OPEN_METEO_FLOOD_API_URL` - Flood forecast API URL (default: https://flood-api.open-meteo.com)
+- `TRANSPORT` - Transport mode: `http` for Streamable HTTP, omit for stdio (default: stdio)
+- `PORT` - HTTP server port when using HTTP transport (default: 3000)
 
 ## Usage Examples
 

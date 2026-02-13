@@ -174,7 +174,8 @@ export const AIR_QUALITY_TOOL: Tool = {
           type: 'string',
           enum: [
             'pm10', 'pm2_5', 'carbon_monoxide', 'nitrogen_dioxide', 'ozone',
-            'sulphur_dioxide', 'ammonia', 'dust', 'aerosol_optical_depth'
+            'sulphur_dioxide', 'ammonia', 'dust', 'aerosol_optical_depth',
+            'carbon_dioxide', 'methane'
           ]
         },
         description: 'Air quality variables to retrieve'
@@ -516,11 +517,11 @@ export const CLIMATE_PROJECTION_TOOL: Tool = {
         items: {
           type: 'string',
           enum: [
-            'meteofrance_arome_france_hd', 'meteofrance_arome_france', 'meteofrance_arpege_europe',
-            'icon_eu', 'icon_global', 'ecmwf_ifs025', 'gfs013'
+            'CMCC_CM2_VHR4', 'FGOALS_f3_H', 'HiRAM_SIT_HR', 'MRI_AGCM3_2_S',
+            'EC_Earth3P_HR', 'MPI_ESM1_2_XR', 'NICAM16_8S'
           ]
         },
-        description: 'Climate models to use'
+        description: 'CMIP6 climate models to use'
       },
       temperature_unit: {
         type: 'string',
