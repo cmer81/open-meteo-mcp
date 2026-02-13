@@ -2,6 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/open-meteo-mcp-server.svg)](https://badge.fury.io/js/open-meteo-mcp-server)
 [![GitHub release](https://img.shields.io/github/release/cmer81/open-meteo-mcp.svg)](https://github.com/cmer81/open-meteo-mcp/releases)
+[![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue.svg)](https://github.com/cmer81/open-meteo-mcp/pkgs/container/open-meteo-mcp)
 
 A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that provides access to Open-Meteo weather APIs for use with Large Language Models.
 
@@ -176,12 +177,39 @@ npm run dev:http
 
 ### Docker Deployment
 
-The server can be easily deployed using Docker:
+The server can be easily deployed using Docker.
 
-#### Using Docker Compose (Recommended)
+#### Using Pre-built Image from GitHub Container Registry (Recommended)
+
+Pull and run the official image:
 
 ```bash
-# Start the server
+# Pull the latest image
+docker pull ghcr.io/cmer81/open-meteo-mcp:latest
+
+# Run the container
+docker run -d \
+  --name open-meteo-mcp \
+  -p 3000:3000 \
+  ghcr.io/cmer81/open-meteo-mcp:latest
+
+# Check health
+curl http://localhost:3000/health
+```
+
+Available tags:
+- `latest` - Latest stable release
+- `v1.x.x` - Specific version (e.g., `v1.1.3`)
+- `1` - Latest v1.x.x release
+- `1.1` - Latest v1.1.x release
+
+#### Using Docker Compose
+
+The repository includes two Docker Compose configurations:
+
+**Production (uses pre-built image):**
+```bash
+# Start with pre-built image from GitHub Container Registry
 docker compose up -d
 
 # View logs
@@ -191,7 +219,18 @@ docker compose logs -f
 docker compose down
 ```
 
-#### Using Docker directly
+**Development (builds from source):**
+```bash
+# Build and start from local source
+docker compose -f docker-compose.dev.yml up -d
+
+# Rebuild after code changes
+docker compose -f docker-compose.dev.yml up -d --build
+```
+
+#### Building from Source
+
+If you prefer to build the image yourself:
 
 ```bash
 # Build the image
