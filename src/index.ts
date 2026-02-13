@@ -19,7 +19,17 @@ import {
   FloodParamsSchema,
   ElevationParamsSchema,
   GeocodingParamsSchema,
+  SeasonalParamsSchema,
+  ClimateParamsSchema,
+  EnsembleParamsSchema,
 } from './types.js';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'));
 
 class OpenMeteoMCPServer {
   private client: OpenMeteoClient;
@@ -34,7 +44,7 @@ class OpenMeteoMCPServer {
     const server = new Server(
       {
         name: 'open-meteo-mcp-server',
-        version: '1.0.0',
+        version: pkg.version,
       },
       {
         capabilities: {
@@ -52,12 +62,8 @@ class OpenMeteoMCPServer {
       const { name, arguments: args } = request.params;
       const timestamp = new Date().toISOString();
 
-      // Log tool call with payload - VERY VISIBLE
-      console.log(`\n[${timestamp}] ========================================`);
-      console.log(`[${timestamp}] 🔧 TOOL CALLED: ${name}`);
-      console.log(`[${timestamp}] 📥 PAYLOAD RECEIVED:`);
-      console.log(JSON.stringify(args, null, 2));
-      console.log(`[${timestamp}] Processing tool execution...`);
+      console.error(`[${timestamp}] TOOL CALLED: ${name}`);
+      console.error(`[${timestamp}] PAYLOAD: ${JSON.stringify(args)}`);
 
       try {
         let result: unknown;
@@ -97,32 +103,68 @@ class OpenMeteoMCPServer {
             result = await this.client.getGeocoding(params);
             break;
           }
+          case 'dwd_icon_forecast': {
+            const params = ForecastParamsSchema.parse(args);
+            result = await this.client.getDwdIcon(params);
+            break;
+          }
+          case 'gfs_forecast': {
+            const params = ForecastParamsSchema.parse(args);
+            result = await this.client.getGfs(params);
+            break;
+          }
+          case 'meteofrance_forecast': {
+            const params = ForecastParamsSchema.parse(args);
+            result = await this.client.getMeteoFrance(params);
+            break;
+          }
+          case 'ecmwf_forecast': {
+            const params = ForecastParamsSchema.parse(args);
+            result = await this.client.getEcmwf(params);
+            break;
+          }
+          case 'jma_forecast': {
+            const params = ForecastParamsSchema.parse(args);
+            result = await this.client.getJma(params);
+            break;
+          }
+          case 'metno_forecast': {
+            const params = ForecastParamsSchema.parse(args);
+            result = await this.client.getMetno(params);
+            break;
+          }
+          case 'gem_forecast': {
+            const params = ForecastParamsSchema.parse(args);
+            result = await this.client.getGem(params);
+            break;
+          }
+          case 'seasonal_forecast': {
+            const params = SeasonalParamsSchema.parse(args);
+            result = await this.client.getSeasonal(params);
+            break;
+          }
+          case 'climate_projection': {
+            const params = ClimateParamsSchema.parse(args);
+            result = await this.client.getClimate(params);
+            break;
+          }
+          case 'ensemble_forecast': {
+            const params = EnsembleParamsSchema.parse(args);
+            result = await this.client.getEnsemble(params);
+            break;
+          }
           default:
             throw new Error(`Unknown tool: ${name}`);
         }
 
         const responseText = JSON.stringify(result, null, 2);
-        // Log response (truncated if too long)
-        const responsePreview = responseText.length > 500
-          ? responseText.substring(0, 500) + '... [truncated]'
-          : responseText;
-        console.log(`[${timestamp}] 📤 RESPONSE SENT:`);
-        console.log(responsePreview);
-        if (responseText.length > 500) {
-          console.log(`[${timestamp}] (Full response length: ${responseText.length} characters, truncated for display)`);
-        }
-        console.log(`[${timestamp}] ✅ TOOL ${name} COMPLETED SUCCESSFULLY`);
-        console.log(`[${timestamp}] ========================================\n`);
+        console.error(`[${timestamp}] TOOL ${name} completed (${responseText.length} chars)`);
 
         return { content: [{ type: 'text', text: responseText }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
-        console.error(`[${timestamp}] ❌ TOOL ${name} FAILED:`, message);
-        if (err instanceof Error && err.stack) {
-          console.error(`[${timestamp}] Stack trace:`, err.stack);
-        }
-        console.log(`[${timestamp}] ========================================\n`);
-        return { content: [{ type: 'text', text: `Error: ${message}` }] };
+        console.error(`[${timestamp}] TOOL ${name} FAILED: ${message}`);
+        return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true };
       }
     });
 
@@ -144,10 +186,15 @@ class OpenMeteoMCPServer {
     });
 
     server.oninitialized = () => {
-      console.log(`✅ MCP server session ${sessionId.substring(0, 8)}... initialized and ready.`);
+      console.error(`✅ MCP server session ${sessionId.substring(0, 8)}... initialized and ready.`);
     };
 
     await server.connect(transport as Transport);
+
+    server.onclose = () => {
+      this.sessionServers.delete(sessionId);
+      console.error(`Session ${sessionId.substring(0, 8)}... closed and cleaned up.`);
+    };
 
     this.sessionServers.set(sessionId, { server, transport });
     return { server, transport };
@@ -197,19 +244,19 @@ class OpenMeteoMCPServer {
           // Log ALL incoming requests with full details
           const method = req.body?.method || 'unknown';
           const timestamp = new Date().toISOString();
-          console.log(`\n[${timestamp}] ========================================`);
-          console.log(`[${timestamp}] 📨 INCOMING REQUEST`);
-          console.log(`[${timestamp}] Method: ${method}`);
-          console.log(`[${timestamp}] Full Request Body:`, JSON.stringify(req.body, null, 2));
+          console.error(`\n[${timestamp}] ========================================`);
+          console.error(`[${timestamp}] 📨 INCOMING REQUEST`);
+          console.error(`[${timestamp}] Method: ${method}`);
+          console.error(`[${timestamp}] Full Request Body:`, JSON.stringify(req.body, null, 2));
 
           // Extract session ID from headers
           const sessionId = (req.headers['mcp-session-id'] ||
             req.headers['Mcp-Session-Id']) as string | undefined;
-          console.log(`[${timestamp}] Session ID: ${sessionId || 'NONE'}`);
+          console.error(`[${timestamp}] Session ID: ${sessionId || 'NONE'}`);
 
           // If no session ID and it's an initialize request, create a new session
           if (!sessionId && req.body?.method === 'initialize') {
-            console.log(`[${timestamp}] [Request] Initialize request received, creating new session`);
+            console.error(`[${timestamp}] [Request] Initialize request received, creating new session`);
             // Generate a new session ID
             const newSessionId = sessionIdGenerator();
 
@@ -221,7 +268,12 @@ class OpenMeteoMCPServer {
             });
 
             server.oninitialized = () => {
-              console.log(`✅ New MCP server session ${newSessionId.substring(0, 8)}... initialized.`);
+              console.error(`New MCP server session ${newSessionId.substring(0, 8)}... initialized.`);
+            };
+
+            server.onclose = () => {
+              this.sessionServers.delete(newSessionId);
+              console.error(`Session ${newSessionId.substring(0, 8)}... closed and cleaned up.`);
             };
 
             await server.connect(transport as Transport);
@@ -234,20 +286,20 @@ class OpenMeteoMCPServer {
 
             // Handle the initialize request
             await transport.handleRequest(req, res, req.body);
-            console.log(`[${timestamp}] ========================================\n`);
+            console.error(`[${timestamp}] ========================================\n`);
             return;
           }
 
           if (sessionId) {
-            console.log(`[${timestamp}] [Session ${sessionId.substring(0, 8)}...] Handling request - Method: ${method}`);
+            console.error(`[${timestamp}] [Session ${sessionId.substring(0, 8)}...] Handling request - Method: ${method}`);
 
             // Special logging for tools/call requests
             if (method === 'tools/call') {
               const toolName = req.body?.params?.name || 'unknown';
               const toolArgs = req.body?.params?.arguments || {};
-              console.log(`[${timestamp}] 🔧 TOOL CALL REQUEST DETECTED`);
-              console.log(`[${timestamp}] 🔧 Tool Name: ${toolName}`);
-              console.log(`[${timestamp}] 📥 Tool Arguments:`, JSON.stringify(toolArgs, null, 2));
+              console.error(`[${timestamp}] 🔧 TOOL CALL REQUEST DETECTED`);
+              console.error(`[${timestamp}] 🔧 Tool Name: ${toolName}`);
+              console.error(`[${timestamp}] 📥 Tool Arguments:`, JSON.stringify(toolArgs, null, 2));
             }
 
             // Get or create session (should already exist if sessionId is provided)
@@ -255,12 +307,12 @@ class OpenMeteoMCPServer {
             await transport.handleRequest(req, res, req.body);
 
             if (method === 'tools/call') {
-              console.log(`[${timestamp}] ✅ Tool call request handled`);
+              console.error(`[${timestamp}] ✅ Tool call request handled`);
             }
-            console.log(`[${timestamp}] ========================================\n`);
+            console.error(`[${timestamp}] ========================================\n`);
           } else {
             // No session ID and not an initialize request - error
-            console.log(`[${timestamp}] ❌ ERROR: No session ID for non-initialize request`);
+            console.error(`[${timestamp}] ❌ ERROR: No session ID for non-initialize request`);
             res.status(400).json({
               jsonrpc: '2.0',
               error: {
@@ -269,7 +321,7 @@ class OpenMeteoMCPServer {
               },
               id: req.body?.id || null
             });
-            console.log(`[${timestamp}] ========================================\n`);
+            console.error(`[${timestamp}] ========================================\n`);
           }
         } catch (err) {
           const timestamp = new Date().toISOString();
@@ -284,13 +336,13 @@ class OpenMeteoMCPServer {
             },
             id: req.body?.id || null
           });
-          console.log(`[${timestamp}] ========================================\n`);
+          console.error(`[${timestamp}] ========================================\n`);
         }
       });
 
       const port = parseInt(process.env.PORT || '3000', 10);
       app.listen(port, () => {
-        console.log(`✅ Open-Meteo MCP HTTP Server running on http://localhost:${port}/mcp`);
+        console.error(`✅ Open-Meteo MCP HTTP Server running on http://localhost:${port}/mcp`);
       }).on('error', (err) => {
         console.error('HTTP server error:', err);
         process.exit(1);

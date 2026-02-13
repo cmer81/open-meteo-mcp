@@ -108,6 +108,7 @@ export const ForecastParamsSchema = CoordinateSchema.extend({
   timeformat: TimeFormatSchema,
   timezone: z.string().optional(),
   past_days: z.union([z.literal(1), z.literal(2)]).optional(),
+  forecast_days: z.number().min(1).max(16).optional(),
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   start_hour: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).optional(),
@@ -182,6 +183,83 @@ export const FloodParamsSchema = CoordinateSchema.extend({
   cell_selection: z.enum(['land', 'sea', 'nearest']).default('nearest').optional(),
 });
 
+// Seasonal forecast parameters
+export const SeasonalParamsSchema = CoordinateSchema.extend({
+  hourly: z.array(z.enum([
+    'pressure_msl', 'temperature_2m', 'temperature_2m_max', 'temperature_2m_min', 'shortwave_radiation',
+    'cloud_cover', 'precipitation', 'showers', 'wind_speed_10m', 'wind_direction_10m',
+    'relative_humidity_2m', 'soil_temperature_0_to_10cm', 'soil_moisture_0_to_10cm', 'soil_moisture_10_to_40cm',
+    'soil_moisture_40_to_100cm', 'soil_moisture_100_to_200cm'
+  ])).optional(),
+  daily: z.array(z.enum([
+    'temperature_2m_max', 'temperature_2m_min', 'shortwave_radiation_sum',
+    'precipitation_sum', 'rain_sum', 'precipitation_hours',
+    'wind_speed_10m_max', 'wind_direction_10m_dominant'
+  ])).optional(),
+  forecast_days: z.union([z.literal(45), z.literal(92), z.literal(183), z.literal(274)]).optional(),
+  past_days: z.number().min(0).max(92).optional(),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  temperature_unit: TemperatureUnitSchema,
+  wind_speed_unit: WindSpeedUnitSchema,
+  precipitation_unit: PrecipitationUnitSchema,
+  timezone: z.string().optional(),
+});
+
+// Climate models
+export const ClimateModelsSchema = z.array(z.enum([
+  'CMCC_CM2_VHR4', 'FGOALS_f3_H', 'HiRAM_SIT_HR', 'MRI_AGCM3_2_S',
+  'EC_Earth3P_HR', 'MPI_ESM1_2_XR', 'NICAM16_8S'
+]));
+
+// Climate projection parameters
+export const ClimateParamsSchema = CoordinateSchema.extend({
+  daily: z.array(z.enum([
+    'temperature_2m_max', 'temperature_2m_min', 'temperature_2m_mean',
+    'cloud_cover_mean', 'relative_humidity_2m_max', 'relative_humidity_2m_min',
+    'relative_humidity_2m_mean', 'soil_moisture_0_to_10cm_mean',
+    'precipitation_sum', 'rain_sum', 'snowfall_sum', 'wind_speed_10m_mean',
+    'wind_speed_10m_max', 'pressure_msl_mean', 'shortwave_radiation_sum'
+  ])),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  models: ClimateModelsSchema,
+  temperature_unit: TemperatureUnitSchema,
+  wind_speed_unit: WindSpeedUnitSchema,
+  precipitation_unit: PrecipitationUnitSchema,
+  disable_bias_correction: z.boolean().optional(),
+});
+
+// Ensemble forecast parameters
+export const EnsembleParamsSchema = CoordinateSchema.extend({
+  models: WeatherModelsSchema,
+  hourly: z.array(z.enum([
+    'temperature_2m', 'relative_humidity_2m', 'dew_point_2m', 'apparent_temperature',
+    'precipitation', 'rain', 'snowfall', 'snow_depth', 'weather_code',
+    'pressure_msl', 'surface_pressure', 'cloud_cover', 'visibility',
+    'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m',
+    'wind_speed_80m', 'wind_direction_80m', 'wind_speed_100m', 'wind_direction_100m',
+    'surface_temperature', 'soil_temperature_0_to_10cm', 'cape',
+    'et0_fao_evapotranspiration', 'vapour_pressure_deficit', 'shortwave_radiation'
+  ])).optional(),
+  daily: z.array(z.enum([
+    'temperature_2m_mean', 'temperature_2m_min', 'temperature_2m_max',
+    'apparent_temperature_mean', 'apparent_temperature_min', 'apparent_temperature_max',
+    'wind_speed_10m_mean', 'wind_speed_10m_min', 'wind_speed_10m_max',
+    'wind_direction_10m_dominant', 'wind_gusts_10m_mean', 'wind_gusts_10m_min', 'wind_gusts_10m_max',
+    'precipitation_sum', 'precipitation_hours', 'rain_sum', 'snowfall_sum',
+    'pressure_msl_mean', 'pressure_msl_min', 'pressure_msl_max',
+    'cloud_cover_mean', 'cloud_cover_min', 'cloud_cover_max',
+    'relative_humidity_2m_mean', 'relative_humidity_2m_min', 'relative_humidity_2m_max',
+    'cape_mean', 'cape_min', 'cape_max', 'shortwave_radiation_sum'
+  ])).optional(),
+  forecast_days: z.number().min(1).max(35).optional(),
+  temperature_unit: TemperatureUnitSchema,
+  wind_speed_unit: WindSpeedUnitSchema,
+  precipitation_unit: PrecipitationUnitSchema,
+  timezone: z.string().optional(),
+});
+
 // Elevation parameters
 export const ElevationParamsSchema = CoordinateSchema;
 
@@ -214,6 +292,9 @@ export type ArchiveParams = z.infer<typeof ArchiveParamsSchema>;
 export type AirQualityParams = z.infer<typeof AirQualityParamsSchema>;
 export type MarineParams = z.infer<typeof MarineParamsSchema>;
 export type FloodParams = z.infer<typeof FloodParamsSchema>;
+export type SeasonalParams = z.infer<typeof SeasonalParamsSchema>;
+export type ClimateParams = z.infer<typeof ClimateParamsSchema>;
+export type EnsembleParams = z.infer<typeof EnsembleParamsSchema>;
 export type ElevationParams = z.infer<typeof ElevationParamsSchema>;
 export type WeatherResponse = z.infer<typeof WeatherResponseSchema>;
 export type ElevationResponse = z.infer<typeof ElevationResponseSchema>;

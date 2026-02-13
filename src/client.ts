@@ -1,15 +1,18 @@
 import axios, { AxiosInstance } from 'axios';
-import type { 
-  ForecastParams, 
-  ArchiveParams, 
-  AirQualityParams, 
-  MarineParams, 
+import type {
+  ForecastParams,
+  ArchiveParams,
+  AirQualityParams,
+  MarineParams,
   FloodParams,
+  SeasonalParams,
+  ClimateParams,
+  EnsembleParams,
   ElevationParams,
   GeocodingParams,
   WeatherResponse,
   ElevationResponse,
-  GeocodingResponse 
+  GeocodingResponse
 } from './types.js';
 
 export class OpenMeteoClient {
@@ -143,7 +146,7 @@ export class OpenMeteoClient {
     return response.data;
   }
 
-  async getEnsemble(params: ForecastParams): Promise<WeatherResponse> {
+  async getEnsemble(params: EnsembleParams): Promise<WeatherResponse> {
     const response = await this.ensembleClient.get('/v1/ensemble', {
       params: this.buildParams(params)
     });
@@ -164,14 +167,14 @@ export class OpenMeteoClient {
     return response.data;
   }
 
-  async getSeasonal(params: ForecastParams): Promise<WeatherResponse> {
+  async getSeasonal(params: SeasonalParams): Promise<WeatherResponse> {
     const response = await this.seasonalClient.get('/v1/seasonal', {
       params: this.buildParams(params)
     });
     return response.data;
   }
 
-  async getClimate(params: ForecastParams): Promise<WeatherResponse> {
+  async getClimate(params: ClimateParams): Promise<WeatherResponse> {
     const response = await this.client.get('/v1/climate', {
       params: this.buildParams(params)
     });
