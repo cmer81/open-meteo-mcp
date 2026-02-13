@@ -10,7 +10,11 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
+    "start:http": "TRANSPORT=http node dist/index.js",
     "dev": "tsx src/index.ts",
+    "dev:http": "TRANSPORT=http tsx src/index.ts",
+    "docker:build": "docker build -t open-meteo-mcp-server .",
+    "docker:run": "docker run -p 3000:3000 open-meteo-mcp-server",
     "test": "vitest",
     "lint": "eslint src/**/*.ts",
     "typecheck": "tsc --noEmit",
