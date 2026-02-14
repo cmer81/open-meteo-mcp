@@ -152,7 +152,7 @@ export const WEATHER_ARCHIVE_TOOL: Tool = {
 
 export const AIR_QUALITY_TOOL: Tool = {
   name: 'air_quality',
-  description: 'Get air quality forecast data including PM2.5, PM10, ozone, nitrogen dioxide and other pollutants.',
+  description: 'Get air quality forecast data including PM2.5, PM10, ozone, nitrogen dioxide, pollen, European/US AQI indices, UV index and other pollutants.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -175,7 +175,11 @@ export const AIR_QUALITY_TOOL: Tool = {
           enum: [
             'pm10', 'pm2_5', 'carbon_monoxide', 'nitrogen_dioxide', 'ozone',
             'sulphur_dioxide', 'ammonia', 'dust', 'aerosol_optical_depth',
-            'carbon_dioxide', 'methane'
+            'carbon_dioxide', 'methane',
+            'alder_pollen', 'birch_pollen', 'grass_pollen', 'mugwort_pollen', 'olive_pollen', 'ragweed_pollen',
+            'european_aqi', 'european_aqi_pm2_5', 'european_aqi_pm10', 'european_aqi_nitrogen_dioxide', 'european_aqi_ozone', 'european_aqi_sulphur_dioxide',
+            'us_aqi', 'us_aqi_pm2_5', 'us_aqi_pm10', 'us_aqi_nitrogen_dioxide', 'us_aqi_ozone', 'us_aqi_sulphur_dioxide', 'us_aqi_carbon_monoxide',
+            'uv_index', 'uv_index_clear_sky'
           ]
         },
         description: 'Air quality variables to retrieve'
