@@ -54,47 +54,81 @@ export const GeocodingErrorSchema = z.object({
 
 // Weather variables schemas
 export const HourlyVariablesSchema = z.array(z.enum([
-  // Temperature variables
-  'temperature_2m', 'relative_humidity_2m', 'dewpoint_2m', 'apparent_temperature', 'surface_temperature',
-  // Pressure variables
-  'pressure_msl', 'surface_pressure',
-  // Cloud variables
-  'cloud_cover', 'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high',
-  // Wind variables
-  'wind_speed_10m', 'wind_speed_80m', 'wind_speed_120m', 'wind_speed_180m',
-  'wind_direction_10m', 'wind_direction_80m', 'wind_direction_120m', 'wind_direction_180m',
-  'wind_gusts_10m', 'wind_u_component_10m', 'wind_v_component_10m',
-  'wind_u_component_80m', 'wind_v_component_80m', 'wind_u_component_120m', 'wind_v_component_120m',
-  'wind_u_component_180m', 'wind_v_component_180m',
-  // Radiation variables
-  'shortwave_radiation', 'direct_radiation', 'direct_normal_irradiance', 'diffuse_radiation',
-  'terrestrial_radiation', 'sunshine_duration', 'uv_index', 'uv_index_clear_sky',
-  // Precipitation variables
-  'precipitation', 'rain', 'showers', 'snowfall', 'precipitation_probability', 'snow_depth', 'snow_height',
-  // Atmospheric variables
-  'vapour_pressure_deficit', 'et0_fao_evapotranspiration', 'weather_code', 'visibility', 'is_day',
-  'cape', 'lifted_index', 'convective_inhibition', 'freezing_level_height', 'boundary_layer_height',
-  'updraft_velocity', 'downdraft_velocity',
-  // Soil variables
-  'soil_temperature_0cm', 'soil_temperature_6cm', 'soil_temperature_18cm', 'soil_temperature_54cm',
-  'soil_moisture_0_1cm', 'soil_moisture_1_3cm', 'soil_moisture_3_9cm', 'soil_moisture_9_27cm',
-  'soil_moisture_27_81cm',
-  // Energy flux variables
-  'sensible_heat_flux', 'latent_heat_flux',
-  // Agricultural variables
-  'growing_degree_days_base_0_limit_30', 'leaf_wetness_probability', 'skin_temperature'
+  'temperature_2m', 'relative_humidity_2m', 'dewpoint_2m', 'apparent_temperature',
+  'precipitation_probability', 'precipitation', 'rain', 'showers', 'snowfall', 'snow_depth',
+  'weather_code', 'pressure_msl', 'surface_pressure', 'cloud_cover', 'cloud_cover_low',
+  'cloud_cover_mid', 'cloud_cover_high', 'visibility', 'evapotranspiration', 'et0_fao_evapotranspiration',
+  'vapour_pressure_deficit', 'wind_speed_10m', 'wind_speed_80m', 'wind_speed_120m',
+  'wind_speed_180m', 'wind_direction_10m', 'wind_direction_80m', 'wind_direction_120m',
+  'wind_direction_180m', 'wind_gusts_10m', 'temperature_80m', 'temperature_120m',
+  'temperature_180m', 'soil_temperature_0cm', 'soil_temperature_6cm', 'soil_temperature_18cm',
+  'soil_temperature_54cm', 'soil_moisture_0_to_1cm', 'soil_moisture_1_to_3cm',
+  'soil_moisture_3_to_9cm', 'soil_moisture_9_to_27cm', 'soil_moisture_27_to_81cm',
+  'uv_index', 'uv_index_clear_sky', 'is_day', 'sunshine_duration', 'wet_bulb_temperature_2m',
+  'total_column_integrated_water_vapour', 'cape', 'lifted_index', 'convective_inhibition',
+  'freezing_level_height', 'boundary_layer_height_pbl', 'shortwave_radiation',
+  'direct_radiation', 'diffuse_radiation', 'direct_normal_irradiance',
+  'global_tilted_irradiance', 'terrestrial_radiation', 'shortwave_radiation_instant',
+  'direct_radiation_instant', 'diffuse_radiation_instant', 'direct_normal_irradiance_instant',
+  'global_tilted_irradiance_instant', 'terrestrial_radiation_instant'
 ])).optional();
 
 export const DailyVariablesSchema = z.array(z.enum([
-  'temperature_2m_max', 'temperature_2m_min', 'apparent_temperature_max', 'apparent_temperature_min',
-  'precipitation_sum', 'precipitation_hours', 'weather_code', 'sunrise', 'sunset',
+  'weather_code', 'temperature_2m_max', 'temperature_2m_min', 'apparent_temperature_max',
+  'apparent_temperature_min', 'sunrise', 'sunset', 'daylight_duration', 'sunshine_duration',
+  'uv_index_max', 'uv_index_clear_sky_max', 'rain_sum', 'showers_sum', 'snowfall_sum',
+  'precipitation_sum', 'precipitation_hours', 'precipitation_probability_max',
   'wind_speed_10m_max', 'wind_gusts_10m_max', 'wind_direction_10m_dominant',
-  'shortwave_radiation_sum', 'uv_index_max', 'uv_index_clear_sky_max', 'et0_fao_evapotranspiration'
+  'shortwave_radiation_sum', 'et0_fao_evapotranspiration', 'temperature_2m_mean',
+  'apparent_temperature_mean', 'cape_mean', 'cape_max', 'cape_min', 'cloud_cover_mean',
+  'cloud_cover_max', 'cloud_cover_min', 'dewpoint_2m_mean', 'dewpoint_2m_max', 'dewpoint_2m_min',
+  'et0_fao_evapotranspiration_sum', 'growing_degree_days_base_0_limit_50',
+  'leaf_wetness_probability_mean', 'leaf_wetness_probability_max', 'leaf_wetness_probability_min',
+  'precipitation_probability_mean', 'precipitation_probability_min',
+  'relative_humidity_2m_mean', 'relative_humidity_2m_max', 'relative_humidity_2m_min',
+  'snowfall_water_equivalent_sum', 'pressure_msl_mean', 'pressure_msl_max', 'pressure_msl_min',
+  'surface_pressure_mean', 'surface_pressure_max', 'surface_pressure_min', 'updraft_max',
+  'visibility_mean', 'visibility_max', 'visibility_min', 'wind_gusts_10m_mean', 'wind_gusts_10m_min',
+  'wind_speed_10m_mean', 'wind_speed_10m_min', 'wet_bulb_temperature_2m_mean',
+  'wet_bulb_temperature_2m_max', 'wet_bulb_temperature_2m_min', 'vapour_pressure_deficit_max'
 ])).optional();
 
-export const WeatherModelsSchema = z.array(z.enum([
-  'meteofrance_arome_france_hd', 'meteofrance_arome_france', 'meteofrance_arpege_europe',
-  'icon_eu', 'icon_global', 'ecmwf_ifs025', 'gfs013'
+export const ForecastModelsSchema = z.array(z.enum([
+  'ecmwf_ifs_hres_9km', 'ecmwf_ifs_025', 'ecmwf_aifs_025_single',
+  'cma_grapes_global', 'bom_access_global', 'ncep_gfs_seamless',
+  'ncep_gfs_global', 'ncep_hrrr_us_conus', 'ncep_nbm_us_conus',
+  'ncep_nam_us_conus', 'ncep_gfs_graphcast', 'ncep_aigfs_025',
+  'ncep_hgefs_025_ensemble_mean', 'jma_seamless', 'jma_msm',
+  'jma_gsm', 'kma_seamless', 'kma_ldps', 'kma_gdps',
+  'dwd_icon_seamless', 'dwd_icon_global', 'dwd_icon_eu', 'dwd_icon_d2',
+  'gem_seamless', 'gem_global', 'gem_regional', 'gem_hrdps_continental',
+  'gem_hrdps_west', 'meteofrance_seamless', 'meteofrance_arpege_world',
+  'meteofrance_arpege_europe', 'meteofrance_arome_france', 'meteofrance_arome_france_hd',
+  'italiameteo_arpae_icon_2i', 'met_norway_nordic_seamless',
+  'met_norway_nordic', 'knmi_seamless', 'knmi_harmonie_arome_europe',
+  'knmi_harmonie_arome_netherlands', 'dmi_seamless', 'dmi_harmonie_arome_europe',
+  'uk_met_office_seamless', 'uk_met_office_global_10km', 'uk_met_office_uk_2km',
+  'meteoswiss_icon_seamless', 'meteoswiss_icon_ch1', 'meteoswiss_icon_ch2'
+])).optional();
+
+
+export const EnsembleModelsSchema = z.array(z.enum([
+  'icon_seamless_eps',
+  'icon_global_eps',
+  'icon_eu_eps',
+  'icon_d2_eps',
+  'gfs_seamless',
+  'gfs_ensemble_025',
+  'gfs_ensemble_05',
+  'aigefs_025',
+  'ecmwf_ifs_025',
+  'ecmwf_aifs_025',
+  'gem_global',
+  'bom_access_global',
+  'ukmo_global_20km',
+  'ukmo_uk_2km',
+  'meteoswiss_icon_ch1',
+  'meteoswiss_icon_ch2'
 ])).optional();
 
 // Forecast parameters schema
@@ -113,7 +147,7 @@ export const ForecastParamsSchema = CoordinateSchema.extend({
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   start_hour: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).optional(),
   end_hour: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/).optional(),
-  models: WeatherModelsSchema,
+  models: ForecastModelsSchema,
 });
 
 // Archive parameters schema
@@ -150,14 +184,20 @@ export const AirQualityParamsSchema = CoordinateSchema.extend({
 
 // Marine variables
 export const MarineHourlyVariablesSchema = z.array(z.enum([
-  'wave_height', 'wave_direction', 'wave_period',
-  'wind_wave_height', 'wind_wave_direction', 'wind_wave_period',
-  'swell_wave_height', 'swell_wave_direction', 'swell_wave_period',
-  'sea_surface_temperature'
+  'wave_height', 'wave_direction', 'wave_period', 'wave_peak_period',
+  'wind_wave_height', 'wind_wave_direction', 'wind_wave_period', 'wind_wave_peak_period',
+  'swell_wave_height', 'swell_wave_direction', 'swell_wave_period', 'swell_wave_peak_period',
+  'secondary_swell_wave_height', 'secondary_swell_wave_period', 'secondary_swell_wave_direction',
+  'tertiary_swell_wave_height', 'tertiary_swell_wave_period', 'tertiary_swell_wave_direction',
+  'sea_level_height_msl', 'sea_surface_temperature', 'ocean_current_velocity',
+  'ocean_current_direction', 'invert_barometer_height'
 ])).optional();
 
 export const MarineDailyVariablesSchema = z.array(z.enum([
-  'wave_height_max', 'wind_wave_height_max', 'swell_wave_height_max'
+  'wave_height_max', 'wave_direction_dominant', 'wave_period_max',
+  'wind_wave_height_max', 'wind_wave_direction_dominant', 'wind_wave_period_max',
+  'wind_wave_peak_period_max', 'swell_wave_height_max', 'swell_wave_direction_dominant',
+  'swell_wave_period_max', 'swell_wave_peak_period_max'
 ])).optional();
 
 export const MarineParamsSchema = CoordinateSchema.extend({
@@ -236,25 +276,30 @@ export const ClimateParamsSchema = CoordinateSchema.extend({
 
 // Ensemble forecast parameters
 export const EnsembleParamsSchema = CoordinateSchema.extend({
-  models: WeatherModelsSchema,
+  models: EnsembleModelsSchema,
   hourly: z.array(z.enum([
     'temperature_2m', 'relative_humidity_2m', 'dew_point_2m', 'apparent_temperature',
-    'precipitation', 'rain', 'snowfall', 'snow_depth', 'weather_code',
-    'pressure_msl', 'surface_pressure', 'cloud_cover', 'visibility',
-    'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m',
-    'wind_speed_80m', 'wind_direction_80m', 'wind_speed_100m', 'wind_direction_100m',
-    'surface_temperature', 'soil_temperature_0_to_10cm', 'cape',
-    'et0_fao_evapotranspiration', 'vapour_pressure_deficit', 'shortwave_radiation'
+    'precipitation', 'rain', 'snowfall', 'snow_depth', 'weather_code', 'pressure_msl',
+    'surface_pressure', 'cloud_cover', 'visibility', 'wind_speed_10m', 'wind_direction_10m',
+    'wind_gusts_10m', 'wind_speed_80m', 'wind_direction_80m', 'wind_speed_100m', 'wind_direction_100m',
+    'surface_temperature', 'soil_temperature_0_to_10cm', 'cape', 'et0_fao_evapotranspiration',
+    'vapour_pressure_deficit', 'shortwave_radiation', 'uv_index', 'uv_index_clear_sky',
+    'temperature_3h_min_2m', 'temperature_3h_max_2m', 'wet_bulb_temperature_2m',
+    'convective_inhibition', 'freezing_level_height', 'snowfall_height', 'sunshine_duration',
+    'snowfall_water_equivalent', 'snow_depth_water_equivalent'
   ])).optional(),
   daily: z.array(z.enum([
     'temperature_2m_mean', 'temperature_2m_min', 'temperature_2m_max',
     'apparent_temperature_mean', 'apparent_temperature_min', 'apparent_temperature_max',
     'wind_speed_10m_mean', 'wind_speed_10m_min', 'wind_speed_10m_max',
     'wind_direction_10m_dominant', 'wind_gusts_10m_mean', 'wind_gusts_10m_min', 'wind_gusts_10m_max',
-    'precipitation_sum', 'precipitation_hours', 'rain_sum', 'snowfall_sum',
-    'pressure_msl_mean', 'pressure_msl_min', 'pressure_msl_max',
+    'wind_speed_100m_mean', 'wind_speed_100m_min', 'wind_speed_100m_max',
+    'wind_direction_100m_dominant', 'precipitation_sum', 'precipitation_hours',
+    'rain_sum', 'snowfall_sum', 'pressure_msl_mean', 'pressure_msl_min', 'pressure_msl_max',
+    'surface_pressure_mean', 'surface_pressure_min', 'surface_pressure_max',
     'cloud_cover_mean', 'cloud_cover_min', 'cloud_cover_max',
     'relative_humidity_2m_mean', 'relative_humidity_2m_min', 'relative_humidity_2m_max',
+    'dew_point_2m_mean', 'dew_point_2m_min', 'dew_point_2m_max',
     'cape_mean', 'cape_min', 'cape_max', 'shortwave_radiation_sum'
   ])).optional(),
   forecast_days: z.number().min(1).max(35).optional(),
