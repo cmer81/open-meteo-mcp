@@ -133,7 +133,11 @@ export const ArchiveParamsSchema = CoordinateSchema.extend({
 export const AirQualityVariablesSchema = z.array(z.enum([
   'pm10', 'pm2_5', 'carbon_monoxide', 'nitrogen_dioxide', 'ozone',
   'sulphur_dioxide', 'ammonia', 'dust', 'aerosol_optical_depth',
-  'carbon_dioxide', 'methane'
+  'carbon_dioxide', 'methane',
+  'alder_pollen', 'birch_pollen', 'grass_pollen', 'mugwort_pollen', 'olive_pollen', 'ragweed_pollen',
+  'european_aqi', 'european_aqi_pm2_5', 'european_aqi_pm10', 'european_aqi_nitrogen_dioxide', 'european_aqi_ozone', 'european_aqi_sulphur_dioxide',
+  'us_aqi', 'us_aqi_pm2_5', 'us_aqi_pm10', 'us_aqi_nitrogen_dioxide', 'us_aqi_ozone', 'us_aqi_sulphur_dioxide', 'us_aqi_carbon_monoxide',
+  'uv_index', 'uv_index_clear_sky'
 ])).optional();
 
 export const AirQualityParamsSchema = CoordinateSchema.extend({

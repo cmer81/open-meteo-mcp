@@ -13,7 +13,7 @@ This MCP server provides complete access to Open-Meteo APIs, including:
 ### Core Weather APIs
 - **Weather Forecast** (`weather_forecast`) - 7-day forecasts with hourly and daily resolution
 - **Weather Archive** (`weather_archive`) - Historical ERA5 data from 1940 to present
-- **Air Quality** (`air_quality`) - PM2.5, PM10, ozone, nitrogen dioxide and other pollutants
+- **Air Quality** (`air_quality`) - PM2.5, PM10, ozone, nitrogen dioxide, pollen, European/US AQI indices, UV index and other pollutants
 - **Marine Weather** (`marine_weather`) - Wave height, wave period, wave direction and sea surface temperature
 - **Elevation** (`elevation`) - Digital elevation model data for given coordinates
 - **Geocoding** (`geocoding`) - Search locations worldwide by name or postal code, get coordinates and detailed location information
@@ -373,6 +373,27 @@ Show me temperature projections for New York from 2050 to 2070 using CMIP6 model
 - `sulphur_dioxide` : Sulfur dioxide
 - `ammonia` : Ammonia
 - `dust` : Dust particles
+- `alder_pollen` : Alder pollen (Europe only)
+- `birch_pollen` : Birch pollen (Europe only)
+- `grass_pollen` : Grass pollen (Europe only)
+- `mugwort_pollen` : Mugwort pollen (Europe only)
+- `olive_pollen` : Olive pollen (Europe only)
+- `ragweed_pollen` : Ragweed pollen (Europe only)
+- `european_aqi` : European Air Quality Index
+- `european_aqi_pm2_5` : European AQI for PM2.5
+- `european_aqi_pm10` : European AQI for PM10
+- `european_aqi_nitrogen_dioxide` : European AQI for NO₂
+- `european_aqi_ozone` : European AQI for ozone
+- `european_aqi_sulphur_dioxide` : European AQI for SO₂
+- `us_aqi` : US Air Quality Index
+- `us_aqi_pm2_5` : US AQI for PM2.5
+- `us_aqi_pm10` : US AQI for PM10
+- `us_aqi_nitrogen_dioxide` : US AQI for NO₂
+- `us_aqi_ozone` : US AQI for ozone
+- `us_aqi_sulphur_dioxide` : US AQI for SO₂
+- `us_aqi_carbon_monoxide` : US AQI for CO
+- `uv_index` : UV index
+- `uv_index_clear_sky` : UV index under clear sky conditions
 
 ### Marine Weather Variables
 - `wave_height` : Wave height
