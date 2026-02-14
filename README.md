@@ -76,7 +76,7 @@ Add the following configuration to your Claude Desktop config file:
   "mcpServers": {
     "open-meteo": {
       "command": "npx",
-      "args": ["open-meteo-mcp-server"]
+      "args": ["-y", "-p", "open-meteo-mcp-server", "open-meteo-mcp-server"]
     }
   }
 }
@@ -89,7 +89,7 @@ Add the following configuration to your Claude Desktop config file:
   "mcpServers": {
     "open-meteo": {
       "command": "npx",
-      "args": ["open-meteo-mcp-server"],
+      "args": ["-y", "-p", "open-meteo-mcp-server", "open-meteo-mcp-server"],
       "env": {
         "OPEN_METEO_API_URL": "https://api.open-meteo.com",
         "OPEN_METEO_AIR_QUALITY_API_URL": "https://air-quality-api.open-meteo.com",
@@ -141,7 +141,7 @@ If you're using your own Open-Meteo instance:
   "mcpServers": {
     "open-meteo": {
       "command": "npx",
-      "args": ["open-meteo-mcp-server"],
+      "args": ["-y", "-p", "open-meteo-mcp-server", "open-meteo-mcp-server"],
       "env": {
         "OPEN_METEO_API_URL": "https://your-meteo-api.example.com",
         "OPEN_METEO_AIR_QUALITY_API_URL": "https://air-quality-api.example.com",
