@@ -130,7 +130,7 @@ export const WEATHER_FORECAST_TOOL: Tool = {
             'meteoswiss_icon_seamless', 'meteoswiss_icon_ch1', 'meteoswiss_icon_ch2'
           ]
         },
-        description: 'Weather models to use'
+        description: 'Weather models to use. If omitted, the best model for the location is chosen automatically. Do not send an empty list.'
       }
     },
     required: ['latitude', 'longitude']
@@ -352,37 +352,37 @@ export const ELEVATION_TOOL: Tool = {
 export const WEATHER_MODEL_TOOLS: Tool[] = [
   {
     name: 'dwd_icon_forecast',
-    description: 'Get weather forecast from German DWD ICON model with high resolution data for Europe and global coverage.',
+    description: 'Get weather forecast from German DWD ICON model. IMPORTANT: You must specify a DWD model in the `models` parameter (e.g., "dwd_icon_global").',
     inputSchema: WEATHER_FORECAST_TOOL.inputSchema
   },
   {
     name: 'gfs_forecast',
-    description: 'Get weather forecast from US NOAA GFS model with global coverage and high-resolution data for North America.',
+    description: 'Get weather forecast from US NOAA GFS model. IMPORTANT: You must specify a GFS model in the `models` parameter (e.g., "gfs_global").',
     inputSchema: WEATHER_FORECAST_TOOL.inputSchema
   },
   {
     name: 'meteofrance_forecast',
-    description: 'Get weather forecast from French Météo-France models including AROME (high-resolution France) and ARPEGE (Europe).',
+    description: 'Get weather forecast from French Météo-France models. IMPORTANT: You must specify a Météo-France model in the `models` parameter (e.g., "meteofrance_arome_france").',
     inputSchema: WEATHER_FORECAST_TOOL.inputSchema
   },
   {
     name: 'ecmwf_forecast',
-    description: 'Get weather forecast from European Centre for Medium-Range Weather Forecasts with high-quality global forecasts.',
+    description: 'Get weather forecast from ECMWF models. IMPORTANT: You must specify an ECMWF model in the `models` parameter (e.g., "ecmwf_ifs_025").',
     inputSchema: WEATHER_FORECAST_TOOL.inputSchema
   },
   {
     name: 'jma_forecast',
-    description: 'Get weather forecast from Japan Meteorological Agency with high-resolution data for Japan and Asia.',
+    description: 'Get weather forecast from Japan Meteorological Agency (JMA) models. IMPORTANT: You must specify a JMA model in the `models` parameter (e.g., "jma_msm").',
     inputSchema: WEATHER_FORECAST_TOOL.inputSchema
   },
   {
     name: 'metno_forecast',
-    description: 'Get weather forecast from Norwegian weather service with high-resolution data for Nordic countries.',
+    description: 'Get weather forecast from Norwegian Meteorological Institute models. IMPORTANT: You must specify a Met.no model in the `models` parameter (e.g., "met_norway_nordic").',
     inputSchema: WEATHER_FORECAST_TOOL.inputSchema
   },
   {
     name: 'gem_forecast',
-    description: 'Get weather forecast from Canadian weather service GEM model with high-resolution data for Canada and North America.',
+    description: 'Get weather forecast from Canadian Meteorological Centre (GEM) models. IMPORTANT: You must specify a GEM model in the `models` parameter (e.g., "gem_global").',
     inputSchema: WEATHER_FORECAST_TOOL.inputSchema
   }
 ];

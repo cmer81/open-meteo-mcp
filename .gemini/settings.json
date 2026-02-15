@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "open-meteo": {
-      "command": "npx",
-      "args": ["-y", "open-meteo-mcp-server"],
+      "command": "node",
+      "args": ["/home/cmer/git/perso/open-meteo-mcp/dist/index.js"],
       "env": {
         "OPEN_METEO_API_URL": "https://api.open-meteo.com",
         "OPEN_METEO_AIR_QUALITY_API_URL": "https://air-quality-api.open-meteo.com",
