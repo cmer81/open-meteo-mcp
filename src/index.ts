@@ -9,6 +9,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import express from 'express';
+import axios from 'axios';
 import { OpenMeteoClient } from './client.js';
 import { ALL_TOOLS } from './tools.js';
 import {
@@ -96,7 +97,13 @@ class OpenMeteoMCPServer {
       const isForecastTool = name.includes('forecast') || name === 'weather_forecast';
       const isClimateTool = name === 'climate_projection';
 
-      if (isForecastTool && !isClimateTool && args && typeof args === 'object' && 'models' in args) {
+      if (
+        isForecastTool &&
+        !isClimateTool &&
+        args &&
+        typeof args === 'object' &&
+        'models' in args
+      ) {
         const models = args.models;
         if (Array.isArray(models) || (typeof models === 'string' && models.startsWith('['))) {
           return {
@@ -213,13 +220,12 @@ class OpenMeteoMCPServer {
         return { content: [{ type: 'text', text: responseText }] };
       } catch (err) {
         let message = 'Unknown error';
-        if (err && typeof err === 'object' && 'isAxiosError' in err && (err as any).isAxiosError) {
-          const axiosError = err as any;
-          message = axiosError.response?.data?.reason || axiosError.response?.data?.error || axiosError.message;
+        if (axios.isAxiosError(err)) {
+          message = err.response?.data?.reason || err.response?.data?.error || err.message;
         } else if (err instanceof Error) {
           message = err.message;
         }
-        
+
         log('error', 'tool_error', { tool: name, error: message, duration_ms: Date.now() - start });
         return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true };
       }
