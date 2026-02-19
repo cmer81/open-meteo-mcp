@@ -91,6 +91,26 @@ class OpenMeteoMCPServer {
 
       log('info', 'tool_call', { tool: name, args });
 
+      // Explicit validation for 'models' parameter on forecast tools
+      // Climate projection is excluded as it naturally supports multiple models in one call
+      const isForecastTool = name.includes('forecast') || name === 'weather_forecast';
+      const isClimateTool = name === 'climate_projection';
+
+      if (isForecastTool && !isClimateTool && args && typeof args === 'object' && 'models' in args) {
+        const models = args.models;
+        if (Array.isArray(models) || (typeof models === 'string' && models.startsWith('['))) {
+          return {
+            content: [
+              {
+                type: 'text',
+                text: 'Error: models must be a single string, not an array. For multi-model comparison, make one parallel tool call per model.',
+              },
+            ],
+            isError: true,
+          };
+        }
+      }
+
       try {
         let result: unknown;
         switch (name) {
@@ -192,7 +212,14 @@ class OpenMeteoMCPServer {
 
         return { content: [{ type: 'text', text: responseText }] };
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error';
+        let message = 'Unknown error';
+        if (err && typeof err === 'object' && 'isAxiosError' in err && (err as any).isAxiosError) {
+          const axiosError = err as any;
+          message = axiosError.response?.data?.reason || axiosError.response?.data?.error || axiosError.message;
+        } else if (err instanceof Error) {
+          message = err.message;
+        }
+        
         log('error', 'tool_error', { tool: name, error: message, duration_ms: Date.now() - start });
         return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true };
       }
