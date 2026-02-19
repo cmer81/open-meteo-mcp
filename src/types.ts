@@ -200,64 +200,77 @@ export const DailyVariablesSchema = z
   )
   .optional();
 
-export const ForecastModelsSchema = z
-  .enum([
-    'ecmwf_ifs_hres_9km',
-    'ecmwf_ifs_025',
-    'ecmwf_aifs_025_single',
-    'cma_grapes_global',
-    'bom_access_global',
-    'ncep_gfs_seamless',
-    'ncep_gfs_global',
-    'ncep_hrrr_us_conus',
-    'ncep_nbm_us_conus',
-    'ncep_nam_us_conus',
-    'ncep_gfs_graphcast',
-    'ncep_aigfs_025',
-    'ncep_hgefs_025_ensemble_mean',
-    'jma_seamless',
-    'jma_msm',
-    'jma_gsm',
-    'kma_seamless',
-    'kma_ldps',
-    'kma_gdps',
-    'dwd_icon_seamless',
-    'dwd_icon_global',
-    'dwd_icon_eu',
-    'dwd_icon_d2',
-    'gem_seamless',
-    'gem_global',
-    'gem_regional',
-    'gem_hrdps_continental',
-    'gem_hrdps_west',
-    'meteofrance_seamless',
-    'meteofrance_arpege_world',
-    'meteofrance_arpege_europe',
-    'meteofrance_arome_france',
-    'meteofrance_arome_france_hd',
-    'italiameteo_arpae_icon_2i',
-    'met_norway_nordic_seamless',
-    'met_norway_nordic',
-    'knmi_seamless',
-    'knmi_harmonie_arome_europe',
-    'knmi_harmonie_arome_netherlands',
-    'dmi_seamless',
-    'dmi_harmonie_arome_europe',
-    'uk_met_office_seamless',
-    'uk_met_office_global_10km',
-    'uk_met_office_uk_2km',
-    'meteoswiss_icon_seamless',
-    'meteoswiss_icon_ch1',
-    'meteoswiss_icon_ch2',
-  ])
-  .optional();
+const validateSingleModel = (val: unknown) => {
+  if (Array.isArray(val) || (typeof val === 'string' && val.startsWith('['))) {
+    throw new Error(
+      'models must be a single string, not an array. For multi-model comparison, make one parallel tool call per model.',
+    );
+  }
+  return val;
+};
+
+export const ForecastModelsSchema = z.preprocess(
+  validateSingleModel,
+  z
+    .enum([
+      'cma_grapes_global',
+      'bom_access_global',
+      'ncep_gfs_seamless',
+      'ncep_gfs_global',
+      'ncep_hrrr_us_conus',
+      'ncep_nbm_us_conus',
+      'ncep_nam_us_conus',
+      'ncep_gfs_graphcast',
+      'ncep_aigfs_025',
+      'ncep_hgefs_025_ensemble_mean',
+      'jma_seamless',
+      'jma_msm',
+      'jma_gsm',
+      'kma_seamless',
+      'kma_ldps',
+      'kma_gdps',
+      'dwd_icon_seamless',
+      'dwd_icon_global',
+      'dwd_icon_eu',
+      'dwd_icon_d2',
+      'gem_seamless',
+      'gem_global',
+      'gem_regional',
+      'gem_hrdps_continental',
+      'gem_hrdps_west',
+      'meteofrance_seamless',
+      'meteofrance_arpege_world',
+      'meteofrance_arpege_europe',
+      'meteofrance_arome_france',
+      'meteofrance_arome_france_hd',
+      'italiameteo_arpae_icon_2i',
+      'met_norway_nordic_seamless',
+      'met_norway_nordic',
+      'knmi_seamless',
+      'knmi_harmonie_arome_europe',
+      'knmi_harmonie_arome_netherlands',
+      'dmi_seamless',
+      'dmi_harmonie_arome_europe',
+      'uk_met_office_seamless',
+      'uk_met_office_global_10km',
+      'uk_met_office_uk_2km',
+      'meteoswiss_icon_seamless',
+      'meteoswiss_icon_ch1',
+      'meteoswiss_icon_ch2',
+    ])
+    .optional(),
+);
 
 // Valid model IDs for the dedicated /v1/ecmwf endpoint (different from /v1/forecast)
-export const EcmwfModelsSchema = z.enum(['ecmwf_ifs', 'ecmwf_ifs025', 'best_match']).optional();
+export const EcmwfModelsSchema = z.preprocess(
+  validateSingleModel,
+  z.enum(['ecmwf_ifs', 'ecmwf_ifs025', 'best_match']).optional(),
+);
 
-export const EnsembleModelsSchema = z
-  .array(
-    z.enum([
+export const EnsembleModelsSchema = z.preprocess(
+  validateSingleModel,
+  z
+    .enum([
       'icon_seamless_eps',
       'icon_global_eps',
       'icon_eu_eps',
@@ -274,9 +287,9 @@ export const EnsembleModelsSchema = z
       'ukmo_uk_2km',
       'meteoswiss_icon_ch1',
       'meteoswiss_icon_ch2',
-    ]),
-  )
-  .optional();
+    ])
+    .optional(),
+);
 
 // Forecast parameters schema
 export const ForecastParamsSchema = CoordinateSchema.extend({
@@ -679,10 +692,10 @@ export const WeatherResponseSchema = z.object({
   current_weather: z
     .object({
       time: z.string(),
-      temperature: z.number(),
-      wind_speed: z.number(),
-      wind_direction: z.number(),
-      weather_code: z.number(),
+      temperature: z.union([z.number(), z.string()]),
+      wind_speed: z.union([z.number(), z.string()]),
+      wind_direction: z.union([z.number(), z.string()]),
+      weather_code: z.union([z.number(), z.string()]),
     })
     .optional(),
 });
