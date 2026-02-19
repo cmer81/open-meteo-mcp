@@ -8,8 +8,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import express from 'express';
 import axios from 'axios';
+import express from 'express';
 import { OpenMeteoClient } from './client.js';
 import { ALL_TOOLS } from './tools.js';
 import {
