@@ -33,7 +33,11 @@ const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-
 
 class OpenMeteoMCPServer {
   private client: OpenMeteoClient;
-  private sessionServers: Map<string, { server: Server; transport: StreamableHTTPServerTransport }> = new Map();
+  private sessionServers: Map<string, { server: Server; transport: StreamableHTTPServerTransport; lastActivity: number }> = new Map();
+
+  private static readonly SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour idle timeout
+  private static readonly MAX_SESSIONS = 100;
+  private static readonly CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // run cleanup every 5 minutes
 
   constructor() {
     const baseURL = process.env.OPEN_METEO_API_URL || 'https://api.open-meteo.com';
@@ -171,39 +175,35 @@ class OpenMeteoMCPServer {
     return server;
   }
 
-  private async getOrCreateSession(sessionId: string): Promise<{ server: Server; transport: StreamableHTTPServerTransport }> {
-    if (this.sessionServers.has(sessionId)) {
-      return this.sessionServers.get(sessionId)!;
+  private getSession(sessionId: string): { server: Server; transport: StreamableHTTPServerTransport } | undefined {
+    const session = this.sessionServers.get(sessionId);
+    if (session) {
+      session.lastActivity = Date.now();
     }
+    return session;
+  }
 
-    // Create new server and transport for this session
-    const server = this.createServer();
-    const sessionIdGenerator = () => sessionId;
-
-    const transport = new StreamableHTTPServerTransport({
-      enableJsonResponse: true,
-      sessionIdGenerator: sessionIdGenerator,
-    });
-
-    server.oninitialized = () => {
-      console.error(`✅ MCP server session ${sessionId.substring(0, 8)}... initialized and ready.`);
-    };
-
-    await server.connect(transport as Transport);
-
-    server.onclose = () => {
-      this.sessionServers.delete(sessionId);
-      console.error(`Session ${sessionId.substring(0, 8)}... closed and cleaned up.`);
-    };
-
-    this.sessionServers.set(sessionId, { server, transport });
-    return { server, transport };
+  private startCleanupTimer(): void {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      for (const [id, session] of this.sessionServers) {
+        if (now - session.lastActivity > OpenMeteoMCPServer.SESSION_TTL_MS) {
+          session.server.close().catch(() => {});
+          this.sessionServers.delete(id);
+          console.error(`Session ${id.substring(0, 8)}... expired and cleaned up.`);
+        }
+      }
+    }, OpenMeteoMCPServer.CLEANUP_INTERVAL_MS);
+    // Don't keep the process alive just for cleanup
+    timer.unref();
   }
 
   async run() {
     const useHttp = process.env.TRANSPORT === 'http';
 
     if (useHttp) {
+      this.startCleanupTimer();
+
       const app = express();
       app.use(express.json());
 
@@ -262,6 +262,18 @@ class OpenMeteoMCPServer {
           // If no session ID and it's an initialize request, create a new session
           if (!sessionId && req.body?.method === 'initialize') {
             console.error(`[${timestamp}] [Request] Initialize request received, creating new session`);
+
+            if (this.sessionServers.size >= OpenMeteoMCPServer.MAX_SESSIONS) {
+              console.error(`[${timestamp}] ❌ Session limit reached (${OpenMeteoMCPServer.MAX_SESSIONS}), rejecting new session`);
+              res.status(503).json({
+                jsonrpc: '2.0',
+                error: { code: -32603, message: 'Server at session capacity, try again later' },
+                id: req.body?.id || null
+              });
+              console.error(`[${timestamp}] ========================================\n`);
+              return;
+            }
+
             // Generate a new session ID
             const newSessionId = sessionIdGenerator();
 
@@ -269,7 +281,7 @@ class OpenMeteoMCPServer {
             const server = this.createServer();
             const transport = new StreamableHTTPServerTransport({
               enableJsonResponse: true,
-              sessionIdGenerator: () => newSessionId, // Always return the same ID for this session
+              sessionIdGenerator: () => newSessionId,
             });
 
             server.oninitialized = () => {
@@ -283,8 +295,7 @@ class OpenMeteoMCPServer {
 
             await server.connect(transport as Transport);
 
-            // Store the session
-            this.sessionServers.set(newSessionId, { server, transport });
+            this.sessionServers.set(newSessionId, { server, transport, lastActivity: Date.now() });
 
             // Set session ID in response header before handling request
             res.setHeader('mcp-session-id', newSessionId);
@@ -307,8 +318,18 @@ class OpenMeteoMCPServer {
               console.error(`[${timestamp}] 📥 Tool Arguments:`, JSON.stringify(toolArgs, null, 2));
             }
 
-            // Get or create session (should already exist if sessionId is provided)
-            const { transport } = await this.getOrCreateSession(sessionId);
+            const session = this.getSession(sessionId);
+            if (!session) {
+              console.error(`[${timestamp}] ❌ Unknown session ID: ${sessionId.substring(0, 8)}...`);
+              res.status(404).json({
+                jsonrpc: '2.0',
+                error: { code: -32600, message: 'Session not found' },
+                id: req.body?.id || null
+              });
+              console.error(`[${timestamp}] ========================================\n`);
+              return;
+            }
+            const { transport } = session;
             await transport.handleRequest(req, res, req.body);
 
             if (method === 'tools/call') {
