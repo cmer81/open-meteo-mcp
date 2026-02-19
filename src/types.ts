@@ -692,10 +692,10 @@ export const WeatherResponseSchema = z.object({
   current_weather: z
     .object({
       time: z.string(),
-      temperature: z.number(),
-      wind_speed: z.number(),
-      wind_direction: z.number(),
-      weather_code: z.number(),
+      temperature: z.union([z.number(), z.string()]),
+      wind_speed: z.union([z.number(), z.string()]),
+      wind_direction: z.union([z.number(), z.string()]),
+      weather_code: z.union([z.number(), z.string()]),
     })
     .optional(),
 });
