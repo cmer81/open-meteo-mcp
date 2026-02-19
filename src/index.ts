@@ -31,6 +31,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf-8'));
 
+// Structured JSON logger — writes to stderr to stay out of MCP stdio protocol
+function log(level: 'info' | 'warn' | 'error', event: string, data: Record<string, unknown> = {}): void {
+  process.stderr.write(JSON.stringify({ timestamp: new Date().toISOString(), level, event, ...data }) + '\n');
+}
+
+// Extracts real client IP, respecting X-Forwarded-For for CDN/proxy setups
+function getClientIp(req: express.Request): string {
+  const xff = req.headers['x-forwarded-for'];
+  if (xff) {
+    const first = Array.isArray(xff) ? xff[0] : xff;
+    const raw = first ?? '';
+    return (raw.split(',')[0] ?? raw).trim();
+  }
+  return req.ip ?? req.socket?.remoteAddress ?? 'unknown';
+}
+
 class OpenMeteoMCPServer {
   private client: OpenMeteoClient;
   private sessionServers: Map<string, { server: Server; transport: StreamableHTTPServerTransport; lastActivity: number }> = new Map();
@@ -64,10 +80,9 @@ class OpenMeteoMCPServer {
 
     server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
-      const timestamp = new Date().toISOString();
+      const start = Date.now();
 
-      console.error(`[${timestamp}] TOOL CALLED: ${name}`);
-      console.error(`[${timestamp}] PAYLOAD: ${JSON.stringify(args)}`);
+      log('info', 'tool_call', { tool: name, args });
 
       try {
         let result: unknown;
@@ -162,12 +177,12 @@ class OpenMeteoMCPServer {
         }
 
         const responseText = JSON.stringify(result, null, 2);
-        console.error(`[${timestamp}] TOOL ${name} completed (${responseText.length} chars)`);
+        log('info', 'tool_success', { tool: name, response_size: responseText.length, duration_ms: Date.now() - start });
 
         return { content: [{ type: 'text', text: responseText }] };
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
-        console.error(`[${timestamp}] TOOL ${name} FAILED: ${message}`);
+        log('error', 'tool_error', { tool: name, error: message, duration_ms: Date.now() - start });
         return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true };
       }
     });
@@ -190,7 +205,7 @@ class OpenMeteoMCPServer {
         if (now - session.lastActivity > OpenMeteoMCPServer.SESSION_TTL_MS) {
           session.server.close().catch(() => {});
           this.sessionServers.delete(id);
-          console.error(`Session ${id.substring(0, 8)}... expired and cleaned up.`);
+          log('info', 'session_expired', { session_id: id.substring(0, 8) });
         }
       }
     }, OpenMeteoMCPServer.CLEANUP_INTERVAL_MS);
@@ -245,37 +260,42 @@ class OpenMeteoMCPServer {
       };
 
       app.post('/mcp', async (req, res) => {
+        const remoteIp = getClientIp(req);
+        const userAgent = req.headers['user-agent'] ?? 'unknown';
+
         try {
-          // Log ALL incoming requests with full details
           const method = req.body?.method || 'unknown';
-          const timestamp = new Date().toISOString();
-          console.error(`\n[${timestamp}] ========================================`);
-          console.error(`[${timestamp}] 📨 INCOMING REQUEST`);
-          console.error(`[${timestamp}] Method: ${method}`);
-          console.error(`[${timestamp}] Full Request Body:`, JSON.stringify(req.body, null, 2));
 
           // Extract session ID from headers
           const sessionId = (req.headers['mcp-session-id'] ||
             req.headers['Mcp-Session-Id']) as string | undefined;
-          console.error(`[${timestamp}] Session ID: ${sessionId || 'NONE'}`);
+
+          log('info', 'http_request', {
+            method,
+            session_id: sessionId ? sessionId.substring(0, 8) : null,
+            remote_ip: remoteIp,
+            user_agent: userAgent,
+          });
 
           // If no session ID and it's an initialize request, create a new session
           if (!sessionId && req.body?.method === 'initialize') {
-            console.error(`[${timestamp}] [Request] Initialize request received, creating new session`);
-
             if (this.sessionServers.size >= OpenMeteoMCPServer.MAX_SESSIONS) {
-              console.error(`[${timestamp}] ❌ Session limit reached (${OpenMeteoMCPServer.MAX_SESSIONS}), rejecting new session`);
+              log('warn', 'session_limit_reached', {
+                current: this.sessionServers.size,
+                max: OpenMeteoMCPServer.MAX_SESSIONS,
+                remote_ip: remoteIp,
+              });
               res.status(503).json({
                 jsonrpc: '2.0',
                 error: { code: -32603, message: 'Server at session capacity, try again later' },
                 id: req.body?.id || null
               });
-              console.error(`[${timestamp}] ========================================\n`);
               return;
             }
 
             // Generate a new session ID
             const newSessionId = sessionIdGenerator();
+            log('info', 'session_created', { session_id: newSessionId.substring(0, 8) });
 
             // Create server and transport for this new session
             const server = this.createServer();
@@ -285,12 +305,12 @@ class OpenMeteoMCPServer {
             });
 
             server.oninitialized = () => {
-              console.error(`New MCP server session ${newSessionId.substring(0, 8)}... initialized.`);
+              log('info', 'session_initialized', { session_id: newSessionId.substring(0, 8) });
             };
 
             server.onclose = () => {
               this.sessionServers.delete(newSessionId);
-              console.error(`Session ${newSessionId.substring(0, 8)}... closed and cleaned up.`);
+              log('info', 'session_closed', { session_id: newSessionId.substring(0, 8) });
             };
 
             await server.connect(transport as Transport);
@@ -302,43 +322,25 @@ class OpenMeteoMCPServer {
 
             // Handle the initialize request
             await transport.handleRequest(req, res, req.body);
-            console.error(`[${timestamp}] ========================================\n`);
             return;
           }
 
           if (sessionId) {
-            console.error(`[${timestamp}] [Session ${sessionId.substring(0, 8)}...] Handling request - Method: ${method}`);
-
-            // Special logging for tools/call requests
-            if (method === 'tools/call') {
-              const toolName = req.body?.params?.name || 'unknown';
-              const toolArgs = req.body?.params?.arguments || {};
-              console.error(`[${timestamp}] 🔧 TOOL CALL REQUEST DETECTED`);
-              console.error(`[${timestamp}] 🔧 Tool Name: ${toolName}`);
-              console.error(`[${timestamp}] 📥 Tool Arguments:`, JSON.stringify(toolArgs, null, 2));
-            }
-
             const session = this.getSession(sessionId);
             if (!session) {
-              console.error(`[${timestamp}] ❌ Unknown session ID: ${sessionId.substring(0, 8)}...`);
+              log('warn', 'session_not_found', { session_id: sessionId.substring(0, 8), remote_ip: remoteIp });
               res.status(404).json({
                 jsonrpc: '2.0',
                 error: { code: -32600, message: 'Session not found' },
                 id: req.body?.id || null
               });
-              console.error(`[${timestamp}] ========================================\n`);
               return;
             }
             const { transport } = session;
             await transport.handleRequest(req, res, req.body);
-
-            if (method === 'tools/call') {
-              console.error(`[${timestamp}] ✅ Tool call request handled`);
-            }
-            console.error(`[${timestamp}] ========================================\n`);
           } else {
             // No session ID and not an initialize request - error
-            console.error(`[${timestamp}] ❌ ERROR: No session ID for non-initialize request`);
+            log('warn', 'invalid_request', { reason: 'missing_session_id', method, remote_ip: remoteIp });
             res.status(400).json({
               jsonrpc: '2.0',
               error: {
@@ -347,13 +349,10 @@ class OpenMeteoMCPServer {
               },
               id: req.body?.id || null
             });
-            console.error(`[${timestamp}] ========================================\n`);
           }
         } catch (err) {
-          const timestamp = new Date().toISOString();
-          console.error(`[${timestamp}] ❌ Request handling error:`, err);
-
           const errorMessage = err instanceof Error ? err.message : String(err);
+          log('error', 'request_error', { error: errorMessage, remote_ip: remoteIp });
           res.status(500).json({
             jsonrpc: '2.0',
             error: {
@@ -362,15 +361,14 @@ class OpenMeteoMCPServer {
             },
             id: req.body?.id || null
           });
-          console.error(`[${timestamp}] ========================================\n`);
         }
       });
 
       const port = parseInt(process.env.PORT || '3000', 10);
       app.listen(port, () => {
-        console.error(`✅ Open-Meteo MCP HTTP Server running on http://localhost:${port}/mcp`);
+        log('info', 'server_start', { transport: 'http', port });
       }).on('error', (err) => {
-        console.error('HTTP server error:', err);
+        log('error', 'server_error', { error: err instanceof Error ? err.message : String(err) });
         process.exit(1);
       });
     } else {
@@ -378,10 +376,10 @@ class OpenMeteoMCPServer {
       const server = this.createServer();
       const transport = new StdioServerTransport();
       server.oninitialized = () => {
-        console.error("✅ MCP server initialized and ready (stdio).");
+        log('info', 'session_initialized', { transport: 'stdio' });
       };
       await server.connect(transport as Transport);
-      console.error('✅ Open-Meteo MCP Server running on stdio');
+      log('info', 'server_start', { transport: 'stdio' });
     }
   }
 
@@ -392,6 +390,6 @@ class OpenMeteoMCPServer {
 
 const server = new OpenMeteoMCPServer();
 server.run().catch((err) => {
-  console.error('Server error:', err);
+  log('error', 'server_error', { error: err instanceof Error ? err.message : String(err) });
   process.exit(1);
 });
