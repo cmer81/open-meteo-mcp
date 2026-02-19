@@ -1,6 +1,6 @@
 {
   "name": "open-meteo-mcp-server",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Model Context Protocol server for Open-Meteo weather APIs",
   "main": "dist/index.js",
   "bin": {
