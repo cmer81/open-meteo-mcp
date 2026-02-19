@@ -16,7 +16,9 @@
     "docker:build": "docker build -t open-meteo-mcp-server .",
     "docker:run": "docker run -p 3000:3000 open-meteo-mcp-server",
     "test": "vitest",
-    "lint": "eslint src/**/*.ts",
+    "lint": "biome lint src/",
+    "format": "biome format --write src/",
+    "check": "biome ci src/",
     "typecheck": "tsc --noEmit",
     "release": "npm run build && npm run test && npm run lint",
     "release:patch": "npm version patch && git push origin main --tags",
@@ -53,11 +55,9 @@
     "zod": "^3.22.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.3",
     "@types/express": "^4.17.25",
     "@types/node": "^20.0.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
-    "eslint": "^8.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.3.0",
     "vitest": "^4.0.16"
