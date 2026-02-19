@@ -3,6 +3,7 @@ import type {
   AirQualityParams,
   ArchiveParams,
   ClimateParams,
+  EcmwfParams,
   ElevationParams,
   ElevationResponse,
   EnsembleParams,
@@ -113,7 +114,7 @@ export class OpenMeteoClient {
     return response.data;
   }
 
-  async getEcmwf(params: ForecastParams): Promise<WeatherResponse> {
+  async getEcmwf(params: EcmwfParams): Promise<WeatherResponse> {
     const response = await this.client.get('/v1/ecmwf', {
       params: this.buildParams(params),
     });
