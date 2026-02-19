@@ -201,58 +201,59 @@ export const DailyVariablesSchema = z
   .optional();
 
 export const ForecastModelsSchema = z
-  .array(
-    z.enum([
-      'ecmwf_ifs_hres_9km',
-      'ecmwf_ifs_025',
-      'ecmwf_aifs_025_single',
-      'cma_grapes_global',
-      'bom_access_global',
-      'ncep_gfs_seamless',
-      'ncep_gfs_global',
-      'ncep_hrrr_us_conus',
-      'ncep_nbm_us_conus',
-      'ncep_nam_us_conus',
-      'ncep_gfs_graphcast',
-      'ncep_aigfs_025',
-      'ncep_hgefs_025_ensemble_mean',
-      'jma_seamless',
-      'jma_msm',
-      'jma_gsm',
-      'kma_seamless',
-      'kma_ldps',
-      'kma_gdps',
-      'dwd_icon_seamless',
-      'dwd_icon_global',
-      'dwd_icon_eu',
-      'dwd_icon_d2',
-      'gem_seamless',
-      'gem_global',
-      'gem_regional',
-      'gem_hrdps_continental',
-      'gem_hrdps_west',
-      'meteofrance_seamless',
-      'meteofrance_arpege_world',
-      'meteofrance_arpege_europe',
-      'meteofrance_arome_france',
-      'meteofrance_arome_france_hd',
-      'italiameteo_arpae_icon_2i',
-      'met_norway_nordic_seamless',
-      'met_norway_nordic',
-      'knmi_seamless',
-      'knmi_harmonie_arome_europe',
-      'knmi_harmonie_arome_netherlands',
-      'dmi_seamless',
-      'dmi_harmonie_arome_europe',
-      'uk_met_office_seamless',
-      'uk_met_office_global_10km',
-      'uk_met_office_uk_2km',
-      'meteoswiss_icon_seamless',
-      'meteoswiss_icon_ch1',
-      'meteoswiss_icon_ch2',
-    ]),
-  )
+  .enum([
+    'ecmwf_ifs_hres_9km',
+    'ecmwf_ifs_025',
+    'ecmwf_aifs_025_single',
+    'cma_grapes_global',
+    'bom_access_global',
+    'ncep_gfs_seamless',
+    'ncep_gfs_global',
+    'ncep_hrrr_us_conus',
+    'ncep_nbm_us_conus',
+    'ncep_nam_us_conus',
+    'ncep_gfs_graphcast',
+    'ncep_aigfs_025',
+    'ncep_hgefs_025_ensemble_mean',
+    'jma_seamless',
+    'jma_msm',
+    'jma_gsm',
+    'kma_seamless',
+    'kma_ldps',
+    'kma_gdps',
+    'dwd_icon_seamless',
+    'dwd_icon_global',
+    'dwd_icon_eu',
+    'dwd_icon_d2',
+    'gem_seamless',
+    'gem_global',
+    'gem_regional',
+    'gem_hrdps_continental',
+    'gem_hrdps_west',
+    'meteofrance_seamless',
+    'meteofrance_arpege_world',
+    'meteofrance_arpege_europe',
+    'meteofrance_arome_france',
+    'meteofrance_arome_france_hd',
+    'italiameteo_arpae_icon_2i',
+    'met_norway_nordic_seamless',
+    'met_norway_nordic',
+    'knmi_seamless',
+    'knmi_harmonie_arome_europe',
+    'knmi_harmonie_arome_netherlands',
+    'dmi_seamless',
+    'dmi_harmonie_arome_europe',
+    'uk_met_office_seamless',
+    'uk_met_office_global_10km',
+    'uk_met_office_uk_2km',
+    'meteoswiss_icon_seamless',
+    'meteoswiss_icon_ch1',
+    'meteoswiss_icon_ch2',
+  ])
   .optional();
+
+// Valid model IDs for the dedicated /v1/ecmwf endpoint (different from /v1/forecast)
+export const EcmwfModelsSchema = z.enum(['ecmwf_ifs', 'ecmwf_ifs025', 'best_match']).optional();
 
 export const EnsembleModelsSchema = z
   .array(
@@ -306,6 +307,11 @@ export const ForecastParamsSchema = CoordinateSchema.extend({
     .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
     .optional(),
   models: ForecastModelsSchema,
+});
+
+// ECMWF-specific parameters schema (uses a different model ID namespace than /v1/forecast)
+export const EcmwfParamsSchema = ForecastParamsSchema.omit({ models: true }).extend({
+  models: EcmwfModelsSchema,
 });
 
 // Archive parameters schema
@@ -686,6 +692,7 @@ export const ElevationResponseSchema = z.object({
 });
 
 export type ForecastParams = z.infer<typeof ForecastParamsSchema>;
+export type EcmwfParams = z.infer<typeof EcmwfParamsSchema>;
 export type ArchiveParams = z.infer<typeof ArchiveParamsSchema>;
 export type AirQualityParams = z.infer<typeof AirQualityParamsSchema>;
 export type MarineParams = z.infer<typeof MarineParamsSchema>;

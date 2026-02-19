@@ -15,6 +15,7 @@ import {
   AirQualityParamsSchema,
   ArchiveParamsSchema,
   ClimateParamsSchema,
+  EcmwfParamsSchema,
   ElevationParamsSchema,
   EnsembleParamsSchema,
   FloodParamsSchema,
@@ -144,7 +145,7 @@ class OpenMeteoMCPServer {
             break;
           }
           case 'ecmwf_forecast': {
-            const params = ForecastParamsSchema.parse(args);
+            const params = EcmwfParamsSchema.parse(args);
             result = await this.client.getEcmwf(params);
             break;
           }
