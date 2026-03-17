@@ -256,26 +256,24 @@ export const ForecastModelsSchema = z
 export const EcmwfModelsSchema = z.enum(['ecmwf_ifs', 'ecmwf_ifs025', 'best_match']).optional();
 
 export const EnsembleModelsSchema = z
-  .array(
-    z.enum([
-      'icon_seamless_eps',
-      'icon_global_eps',
-      'icon_eu_eps',
-      'icon_d2_eps',
-      'gfs_seamless',
-      'gfs_ensemble_025',
-      'gfs_ensemble_05',
-      'aigefs_025',
-      'ecmwf_ifs_025',
-      'ecmwf_aifs_025',
-      'gem_global',
-      'bom_access_global',
-      'ukmo_global_20km',
-      'ukmo_uk_2km',
-      'meteoswiss_icon_ch1',
-      'meteoswiss_icon_ch2',
-    ]),
-  )
+  .enum([
+    'icon_seamless_eps',
+    'icon_global_eps',
+    'icon_eu_eps',
+    'icon_d2_eps',
+    'gfs_seamless',
+    'gfs_ensemble_025',
+    'gfs_ensemble_05',
+    'aigefs_025',
+    'ecmwf_ifs_025',
+    'ecmwf_aifs_025',
+    'gem_global',
+    'bom_access_global',
+    'ukmo_global_20km',
+    'ukmo_uk_2km',
+    'meteoswiss_icon_ch1',
+    'meteoswiss_icon_ch2',
+  ])
   .optional();
 
 // Forecast parameters schema
