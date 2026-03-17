@@ -281,6 +281,7 @@ export const ForecastParamsSchema = CoordinateSchema.extend({
   hourly: HourlyVariablesSchema,
   daily: DailyVariablesSchema,
   current_weather: z.boolean().optional(),
+  current: HourlyVariablesSchema,
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,

@@ -143,3 +143,42 @@ describe('Fix 3: EnsembleModelsSchema is a single string', () => {
     expect(Array.isArray(models['enum'])).toBe(true);
   });
 });
+
+describe('Fix 4: current array parameter in weather_forecast', () => {
+  it('ForecastParamsSchema should accept current array', () => {
+    const result = ForecastParamsSchema.safeParse({
+      latitude: 48.8566,
+      longitude: 2.3522,
+      current: ['temperature_2m', 'wind_speed_10m', 'weather_code'],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('ForecastParamsSchema should reject invalid current variables', () => {
+    const result = ForecastParamsSchema.safeParse({
+      latitude: 48.8566,
+      longitude: 2.3522,
+      current: ['not_a_real_variable'],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('ForecastParamsSchema should keep current_weather working', () => {
+    const result = ForecastParamsSchema.safeParse({
+      latitude: 48.8566,
+      longitude: 2.3522,
+      current_weather: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('WEATHER_FORECAST_TOOL should have a current property of type array', () => {
+    const props = WEATHER_FORECAST_TOOL.inputSchema.properties as Record<string, unknown>;
+    const current = props['current'] as Record<string, unknown>;
+    expect(current).toBeDefined();
+    expect(current['type']).toBe('array');
+    const items = current['items'] as Record<string, unknown>;
+    expect(items['enum']).toContain('temperature_2m');
+    expect(items['enum']).toContain('wind_speed_10m');
+  });
+});
