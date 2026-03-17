@@ -167,6 +167,19 @@ TRANSPORT=http PORT=3000 npx open-meteo-mcp-server
 
 This starts an Express server on the specified port (default: 3000) with the MCP endpoint at `/mcp`. The HTTP transport supports session management with unique session IDs per client.
 
+For production deployments, enable authentication and rate limiting:
+
+```bash
+API_KEY=your-secret-key RATE_LIMIT_RPM=60 TRANSPORT=http PORT=3000 npx open-meteo-mcp-server
+```
+
+Clients must then include the key in every request:
+```
+Authorization: Bearer your-secret-key
+# or
+X-API-Key: your-secret-key
+```
+
 #### Using npm scripts
 
 ```bash
@@ -283,6 +296,12 @@ All environment variables are optional and have sensible defaults:
 - `OPEN_METEO_CLIMATE_API_URL` - Climate projection API URL (default: https://climate-api.open-meteo.com)
 - `TRANSPORT` - Transport mode: `http` for Streamable HTTP, omit for stdio (default: stdio)
 - `PORT` - HTTP server port when using HTTP transport (default: 3000)
+
+#### HTTP Transport Security (optional)
+
+- `API_KEY` - When set, all requests to `/mcp` must include this key via `Authorization: Bearer <key>` or `X-API-Key: <key>`. Leave unset for open access (local/dev mode).
+- `RATE_LIMIT_RPM` - Maximum requests per minute per IP (default: `60`). HTTP transport only.
+- `TRUSTED_PROXIES` - Comma-separated list of trusted proxy IPs or CIDR ranges (e.g. `10.0.0.0/8,172.16.0.0/12`). When set, `X-Forwarded-For` is honoured only for requests originating from these addresses. Leave unset to always use the direct connection IP.
 
 ## Usage Examples
 
@@ -443,7 +462,8 @@ src/
 ├── index.ts          # MCP server entry point
 ├── client.ts         # HTTP client for Open-Meteo API
 ├── tools.ts          # MCP tool definitions
-└── types.ts          # Zod validation schemas
+├── types.ts          # Zod validation schemas
+└── security.ts       # Auth middleware, rate limiter, IP extraction
 ```
 
 ## API Coverage
@@ -485,7 +505,6 @@ The server provides comprehensive error handling with detailed error messages fo
 ## Performance
 
 - Efficient HTTP client with connection pooling
-- Request caching for repeated queries
 - Optimized data serialization
 - Minimal memory footprint
 
