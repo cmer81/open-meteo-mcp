@@ -10,6 +10,13 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import express from 'express';
 import { OpenMeteoClient } from './client.js';
+import {
+  createAuthMiddleware,
+  createRateLimiter,
+  generateSessionId,
+  getClientIp,
+  sanitizeErrorMessage,
+} from './security.js';
 import { ALL_TOOLS } from './tools.js';
 import {
   AirQualityParamsSchema,
@@ -38,17 +45,6 @@ function log(
   process.stderr.write(
     `${JSON.stringify({ timestamp: new Date().toISOString(), level, event, ...data })}\n`,
   );
-}
-
-// Extracts real client IP, respecting X-Forwarded-For for CDN/proxy setups
-function getClientIp(req: express.Request): string {
-  const xff = req.headers['x-forwarded-for'];
-  if (xff) {
-    const first = Array.isArray(xff) ? xff[0] : xff;
-    const raw = first ?? '';
-    return (raw.split(',')[0] ?? raw).trim();
-  }
-  return req.ip ?? req.socket?.remoteAddress ?? 'unknown';
 }
 
 class OpenMeteoMCPServer {
@@ -266,14 +262,8 @@ class OpenMeteoMCPServer {
         next();
       });
 
-      // Generate unique session IDs for each client
-      const sessionIdGenerator = () => {
-        const timestamp = Date.now().toString(36);
-        const random1 = Math.random().toString(36).substring(2, 15);
-        const random2 = Math.random().toString(36).substring(2, 15);
-        const random3 = Math.random().toString(36).substring(2, 15);
-        return `${timestamp}-${random1}-${random2}-${random3}`;
-      };
+      app.use(createRateLimiter());
+      app.use(createAuthMiddleware());
 
       app.post('/mcp', async (req, res) => {
         const remoteIp = getClientIp(req);
@@ -282,10 +272,8 @@ class OpenMeteoMCPServer {
         try {
           const method = req.body?.method || 'unknown';
 
-          // Extract session ID from headers
-          const sessionId = (req.headers['mcp-session-id'] || req.headers['Mcp-Session-Id']) as
-            | string
-            | undefined;
+          // Extract session ID from headers (Express normalises headers to lowercase)
+          const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
           log('info', 'http_request', {
             method,
@@ -311,7 +299,7 @@ class OpenMeteoMCPServer {
             }
 
             // Generate a new session ID
-            const newSessionId = sessionIdGenerator();
+            const newSessionId = generateSessionId();
             log('info', 'session_created', { session_id: newSessionId.substring(0, 8) });
 
             // Create server and transport for this new session
@@ -381,7 +369,7 @@ class OpenMeteoMCPServer {
             jsonrpc: '2.0',
             error: {
               code: -32603,
-              message: `Internal error: ${errorMessage}`,
+              message: sanitizeErrorMessage(err),
             },
             id: req.body?.id || null,
           });
