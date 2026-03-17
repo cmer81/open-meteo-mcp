@@ -256,26 +256,24 @@ export const ForecastModelsSchema = z
 export const EcmwfModelsSchema = z.enum(['ecmwf_ifs', 'ecmwf_ifs025', 'best_match']).optional();
 
 export const EnsembleModelsSchema = z
-  .array(
-    z.enum([
-      'icon_seamless_eps',
-      'icon_global_eps',
-      'icon_eu_eps',
-      'icon_d2_eps',
-      'gfs_seamless',
-      'gfs_ensemble_025',
-      'gfs_ensemble_05',
-      'aigefs_025',
-      'ecmwf_ifs_025',
-      'ecmwf_aifs_025',
-      'gem_global',
-      'bom_access_global',
-      'ukmo_global_20km',
-      'ukmo_uk_2km',
-      'meteoswiss_icon_ch1',
-      'meteoswiss_icon_ch2',
-    ]),
-  )
+  .enum([
+    'icon_seamless_eps',
+    'icon_global_eps',
+    'icon_eu_eps',
+    'icon_d2_eps',
+    'gfs_seamless',
+    'gfs_ensemble_025',
+    'gfs_ensemble_05',
+    'aigefs_025',
+    'ecmwf_ifs_025',
+    'ecmwf_aifs_025',
+    'gem_global',
+    'bom_access_global',
+    'ukmo_global_20km',
+    'ukmo_uk_2km',
+    'meteoswiss_icon_ch1',
+    'meteoswiss_icon_ch2',
+  ])
   .optional();
 
 // Forecast parameters schema
@@ -283,12 +281,13 @@ export const ForecastParamsSchema = CoordinateSchema.extend({
   hourly: HourlyVariablesSchema,
   daily: DailyVariablesSchema,
   current_weather: z.boolean().optional(),
+  current: HourlyVariablesSchema,
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
   timeformat: TimeFormatSchema,
   timezone: z.string().optional(),
-  past_days: z.union([z.literal(1), z.literal(2)]).optional(),
+  past_days: z.number().int().min(1).max(92).optional(),
   forecast_days: z.number().min(1).max(16).optional(),
   start_date: z
     .string()
@@ -403,6 +402,9 @@ export const ArchiveParamsSchema = CoordinateSchema.extend({
   precipitation_unit: PrecipitationUnitSchema,
   timeformat: TimeFormatSchema,
   timezone: z.string().optional(),
+}).refine((data) => data.start_date <= data.end_date, {
+  message: 'start_date must be before or equal to end_date',
+  path: ['end_date'],
 });
 
 // Air quality variables
@@ -639,6 +641,9 @@ export const ClimateParamsSchema = CoordinateSchema.extend({
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
   disable_bias_correction: z.boolean().optional(),
+}).refine((data) => data.start_date <= data.end_date, {
+  message: 'start_date must be before or equal to end_date',
+  path: ['end_date'],
 });
 
 // Ensemble forecast parameters
