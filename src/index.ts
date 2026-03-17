@@ -309,9 +309,58 @@ export class OpenMeteoMCPServer {
       }
     });
 
-    // DELETE /mcp — stub (will be implemented in Task 4)
-    app.delete('/mcp', async (_req, res) => {
-      res.status(501).json({ error: 'Not implemented' });
+    // DELETE /mcp — session termination
+    app.delete('/mcp', async (req, res) => {
+      const remoteIp = getClientIp(req);
+      const userAgent = req.headers['user-agent'] ?? 'unknown';
+
+      try {
+        const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
+        log('info', 'http_request', {
+          method: 'DELETE',
+          session_id: sessionId ? sessionId.substring(0, 8) : null,
+          remote_ip: remoteIp,
+          user_agent: userAgent,
+        });
+
+        if (!sessionId) {
+          res.status(400).json({
+            jsonrpc: '2.0',
+            error: { code: -32600, message: 'Invalid Request: Session ID required' },
+            id: null,
+          });
+          return;
+        }
+
+        // Use direct map access — lastActivity is irrelevant for a session about to be destroyed
+        const session = this.sessionServers.get(sessionId);
+        if (!session) {
+          log('warn', 'session_not_found', {
+            session_id: sessionId.substring(0, 8),
+            remote_ip: remoteIp,
+          });
+          res.status(404).json({
+            jsonrpc: '2.0',
+            error: { code: -32600, message: 'Session not found' },
+            id: null,
+          });
+          return;
+        }
+
+        await session.transport.close();
+        res.status(200).json({ message: 'Session terminated' });
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        log('error', 'request_error', { error: errorMessage, remote_ip: remoteIp });
+        if (!res.headersSent) {
+          res.status(500).json({
+            jsonrpc: '2.0',
+            error: { code: -32603, message: sanitizeErrorMessage(err) },
+            id: null,
+          });
+        }
+      }
     });
 
     app.use(createRateLimiter());
