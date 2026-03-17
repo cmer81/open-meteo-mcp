@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import type express from 'express';
+import supertest from 'supertest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { OpenMeteoClient } from './client.js';
+import { OpenMeteoMCPServer } from './index.js';
 import { ALL_TOOLS } from './tools.js';
 import {
   AirQualityParamsSchema,
@@ -90,5 +93,29 @@ describe('Module imports', () => {
     expect(OpenMeteoClient).toBeDefined();
     const client = new OpenMeteoClient();
     expect(client).toBeInstanceOf(OpenMeteoClient);
+  });
+});
+
+describe('GET /mcp', () => {
+  let app: express.Application;
+
+  beforeEach(() => {
+    process.env.NODE_ENV = 'test';
+    const server = new OpenMeteoMCPServer();
+    app = (server as unknown as { buildExpressApp(): express.Application }).buildExpressApp();
+  });
+
+  it('returns 400 when mcp-session-id header is missing', async () => {
+    const res = await supertest(app).get('/mcp');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe(-32600);
+  });
+
+  it('returns 404 when mcp-session-id refers to unknown session', async () => {
+    const res = await supertest(app).get('/mcp').set('mcp-session-id', 'nonexistent-session-id');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBeDefined();
+    expect(res.body.error.code).toBe(-32600);
   });
 });
