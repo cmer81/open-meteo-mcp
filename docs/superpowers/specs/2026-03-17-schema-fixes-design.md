@@ -33,10 +33,12 @@ Four schema inconsistencies between `types.ts`, `tools.ts` and the actual Open-M
 
 ```ts
 .refine(
-  (data) => !data.start_date || !data.end_date || data.start_date <= data.end_date,
+  (data) => data.start_date <= data.end_date,
   { message: 'start_date must be before or equal to end_date', path: ['end_date'] }
 )
 ```
+
+Note: Both `start_date` and `end_date` are required in both schemas, so no optional guards are needed.
 
 **No max range cap:** The Archive API has no documented maximum range. The Climate API explicitly recommends using the full 1950–2050 range. Adding an artificial cap would break legitimate use cases.
 
@@ -67,6 +69,8 @@ Four schema inconsistencies between `types.ts`, `tools.ts` and the actual Open-M
 **Fix in `tools.ts`:** Add `current` property to `WEATHER_FORECAST_TOOL` inputSchema with same array/items structure as `hourly`.
 
 **Rationale:** The `current_weather: boolean` parameter is deprecated by Open-Meteo. The current API supports a `current` array of specific variables (e.g. `["temperature_2m", "wind_speed_10m"]`). Both the old and new params should coexist — `current_weather` is kept for backward compatibility.
+
+**Note on variable scope:** The Open-Meteo docs explicitly state "Every weather variable available in hourly data, is available as current condition as well." Reusing `HourlyVariablesSchema` is therefore correct and intentional — no separate `CurrentVariablesSchema` is needed.
 
 ---
 
