@@ -192,8 +192,9 @@ export const WEATHER_FORECAST_TOOL: Tool = {
       },
       past_days: {
         type: 'integer',
-        enum: [1, 2],
-        description: 'Include past days data',
+        minimum: 1,
+        maximum: 92,
+        description: 'Include past days data (1–92)',
       },
       forecast_days: {
         type: 'integer',

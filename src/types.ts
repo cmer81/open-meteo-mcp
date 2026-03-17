@@ -288,7 +288,7 @@ export const ForecastParamsSchema = CoordinateSchema.extend({
   precipitation_unit: PrecipitationUnitSchema,
   timeformat: TimeFormatSchema,
   timezone: z.string().optional(),
-  past_days: z.union([z.literal(1), z.literal(2)]).optional(),
+  past_days: z.number().int().min(1).max(92).optional(),
   forecast_days: z.number().min(1).max(16).optional(),
   start_date: z
     .string()
