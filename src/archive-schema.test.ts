@@ -140,19 +140,11 @@ describe('ArchiveParamsSchema uses archive-specific schemas', () => {
 describe('WEATHER_ARCHIVE_TOOL schema alignment', () => {
   const toolInputSchema = WEATHER_ARCHIVE_TOOL.inputSchema;
   const hourlyEnum: string[] =
-    (
-      toolInputSchema.properties as Record<
-        string,
-        { items?: { enum?: string[] } }
-      >
-    ).hourly?.items?.enum ?? [];
+    (toolInputSchema.properties as Record<string, { items?: { enum?: string[] } }>).hourly?.items
+      ?.enum ?? [];
   const dailyEnum: string[] =
-    (
-      toolInputSchema.properties as Record<
-        string,
-        { items?: { enum?: string[] } }
-      >
-    ).daily?.items?.enum ?? [];
+    (toolInputSchema.properties as Record<string, { items?: { enum?: string[] } }>).daily?.items
+      ?.enum ?? [];
 
   it('should include ERA5-specific hourly variables in tool schema', () => {
     expect(hourlyEnum).toContain('soil_moisture_0_to_7cm');
