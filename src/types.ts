@@ -403,6 +403,9 @@ export const ArchiveParamsSchema = CoordinateSchema.extend({
   precipitation_unit: PrecipitationUnitSchema,
   timeformat: TimeFormatSchema,
   timezone: z.string().optional(),
+}).refine((data) => data.start_date <= data.end_date, {
+  message: 'start_date must be before or equal to end_date',
+  path: ['end_date'],
 });
 
 // Air quality variables
@@ -639,6 +642,9 @@ export const ClimateParamsSchema = CoordinateSchema.extend({
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
   disable_bias_correction: z.boolean().optional(),
+}).refine((data) => data.start_date <= data.end_date, {
+  message: 'start_date must be before or equal to end_date',
+  path: ['end_date'],
 });
 
 // Ensemble forecast parameters

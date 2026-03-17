@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ForecastParamsSchema } from './types.js';
+import { ForecastParamsSchema, ArchiveParamsSchema, ClimateParamsSchema } from './types.js';
 import { WEATHER_FORECAST_TOOL } from './tools.js';
 
 describe('Fix 1: past_days cap', () => {
@@ -38,5 +38,78 @@ describe('Fix 1: past_days cap', () => {
       past_days: 93,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe('Fix 2: date range validation', () => {
+  describe('ArchiveParamsSchema', () => {
+    it('should accept start_date equal to end_date', () => {
+      const result = ArchiveParamsSchema.safeParse({
+        latitude: 48.8566,
+        longitude: 2.3522,
+        start_date: '2024-01-01',
+        end_date: '2024-01-01',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should accept start_date before end_date', () => {
+      const result = ArchiveParamsSchema.safeParse({
+        latitude: 48.8566,
+        longitude: 2.3522,
+        start_date: '2024-01-01',
+        end_date: '2024-12-31',
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('should reject start_date after end_date', () => {
+      const result = ArchiveParamsSchema.safeParse({
+        latitude: 48.8566,
+        longitude: 2.3522,
+        start_date: '2024-12-31',
+        end_date: '2024-01-01',
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0].path).toContain('end_date');
+    });
+
+    it('should reject start_date one day after end_date (minimally invalid)', () => {
+      const result = ArchiveParamsSchema.safeParse({
+        latitude: 48.8566,
+        longitude: 2.3522,
+        start_date: '2024-01-02',
+        end_date: '2024-01-01',
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0].path).toContain('end_date');
+    });
+  });
+
+  describe('ClimateParamsSchema', () => {
+    it('should reject start_date after end_date', () => {
+      const result = ClimateParamsSchema.safeParse({
+        latitude: 48.8566,
+        longitude: 2.3522,
+        start_date: '2050-01-01',
+        end_date: '2020-01-01',
+        models: ['CMCC_CM2_VHR4'],
+        daily: ['temperature_2m_max'],
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0].path).toContain('end_date');
+    });
+
+    it('should accept valid date range', () => {
+      const result = ClimateParamsSchema.safeParse({
+        latitude: 48.8566,
+        longitude: 2.3522,
+        start_date: '1950-01-01',
+        end_date: '2050-01-01',
+        models: ['CMCC_CM2_VHR4'],
+        daily: ['temperature_2m_max'],
+      });
+      expect(result.success).toBe(true);
+    });
   });
 });
