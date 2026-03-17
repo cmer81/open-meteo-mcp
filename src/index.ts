@@ -60,7 +60,7 @@ export class OpenMeteoMCPServer {
 
   constructor() {
     const baseURL = process.env.OPEN_METEO_API_URL || 'https://api.open-meteo.com';
-    this.client = new OpenMeteoClient(baseURL);
+    this.client = new OpenMeteoClient(baseURL, pkg.version);
   }
 
   private createServer(): Server {

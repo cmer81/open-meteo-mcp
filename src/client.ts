@@ -27,12 +27,15 @@ export class OpenMeteoClient {
   private floodClient: AxiosInstance;
   private climateClient: AxiosInstance;
 
-  constructor(baseURL: string = process.env.OPEN_METEO_API_URL || 'https://api.open-meteo.com') {
+  constructor(
+    baseURL: string = process.env.OPEN_METEO_API_URL || 'https://api.open-meteo.com',
+    version = 'unknown',
+  ) {
     const config = {
       timeout: 30000,
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'Open-Meteo-MCP-Server/1.0.0',
+        'User-Agent': `Open-Meteo-MCP-Server/${version}`,
       },
     };
 
