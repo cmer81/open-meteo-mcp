@@ -91,7 +91,8 @@ function normalizeIp(ip: string): string {
 }
 
 export function getClientIp(req: Request): string {
-  const rawSocketIp = req.ip ?? (req.socket as { remoteAddress?: string })?.remoteAddress ?? 'unknown';
+  const rawSocketIp =
+    req.ip ?? (req.socket as { remoteAddress?: string })?.remoteAddress ?? 'unknown';
   const socketIp = rawSocketIp === 'unknown' ? rawSocketIp : normalizeIp(rawSocketIp);
 
   const trustedProxies = process.env.TRUSTED_PROXIES;
