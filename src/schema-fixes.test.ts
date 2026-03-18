@@ -149,6 +149,52 @@ describe('Fix 3: EnsembleModelsSchema is a single string', () => {
   });
 });
 
+describe('Fix 5: EnsembleModelsSchema correct API model names', () => {
+  const validNewModels = [
+    'ncep_gefs025',
+    'ncep_gefs05',
+    'ncep_aigefs025',
+    'ecmwf_ifs025_ensemble',
+    'ecmwf_aifs025_ensemble',
+    'ukmo_global_ensemble_20km',
+    'ukmo_uk_ensemble_2km',
+  ];
+
+  const invalidOldModels = [
+    'gfs_ensemble_025',
+    'gfs_ensemble_05',
+    'aigefs_025',
+    'ecmwf_ifs_025',
+    'ecmwf_aifs_025',
+    'ukmo_global_20km',
+    'ukmo_uk_2km',
+  ];
+
+  for (const model of validNewModels) {
+    it(`should accept canonical model: ${model}`, () => {
+      const result = EnsembleParamsSchema.safeParse({
+        latitude: 48.8566,
+        longitude: 2.3522,
+        models: model,
+        hourly: ['temperature_2m'],
+      });
+      expect(result.success).toBe(true);
+    });
+  }
+
+  for (const model of invalidOldModels) {
+    it(`should reject invalid old model: ${model}`, () => {
+      const result = EnsembleParamsSchema.safeParse({
+        latitude: 48.8566,
+        longitude: 2.3522,
+        models: model,
+        hourly: ['temperature_2m'],
+      });
+      expect(result.success).toBe(false);
+    });
+  }
+});
+
 describe('Fix 4: current array parameter in weather_forecast', () => {
   it('ForecastParamsSchema should accept current array', () => {
     const result = ForecastParamsSchema.safeParse({
