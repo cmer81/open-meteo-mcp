@@ -12,21 +12,21 @@ const VALID_MODELS = [
   // NCEP/GFS — correct names
   'gfs_seamless',
   'ncep_gfs_global',
-  'ncep_hrrr_conus',        // was ncep_hrrr_us_conus
-  'ncep_nbm_conus',         // was ncep_nbm_us_conus
-  'ncep_nam_conus',         // was ncep_nam_us_conus
-  'ncep_gfs_graphcast025',  // was ncep_gfs_graphcast
-  'ncep_aigfs025',          // was ncep_aigfs_025
+  'ncep_hrrr_conus', // was ncep_hrrr_us_conus
+  'ncep_nbm_conus', // was ncep_nbm_us_conus
+  'ncep_nam_conus', // was ncep_nam_us_conus
+  'ncep_gfs_graphcast025', // was ncep_gfs_graphcast
+  'ncep_aigfs025', // was ncep_aigfs_025
   'ncep_hgefs025_ensemble_mean', // was ncep_hgefs_025_ensemble_mean
   // Italy
   'italia_meteo_arpae_icon_2i', // was italiameteo_arpae_icon_2i
   // MetNo
-  'metno_seamless',         // was met_norway_nordic_seamless
-  'metno_nordic',           // was met_norway_nordic
+  'metno_seamless', // was met_norway_nordic_seamless
+  'metno_nordic', // was met_norway_nordic
   // UKMO
-  'ukmo_seamless',                  // was uk_met_office_seamless
+  'ukmo_seamless', // was uk_met_office_seamless
   'ukmo_global_deterministic_10km', // was uk_met_office_global_10km
-  'ukmo_uk_deterministic_2km',      // was uk_met_office_uk_2km
+  'ukmo_uk_deterministic_2km', // was uk_met_office_uk_2km
 ] as const;
 
 const INVALID_OLD_MODELS = [
@@ -49,10 +49,9 @@ const INVALID_OLD_MODELS = [
 ];
 
 describe('ForecastModelsSchema — canonical API model names', () => {
-  const toolModelsEnum: string[] = (
+  const toolModelsEnum: string[] =
     (WEATHER_FORECAST_TOOL.inputSchema.properties as Record<string, { enum?: string[] }>).models
-      ?.enum ?? []
-  );
+      ?.enum ?? [];
 
   for (const model of VALID_MODELS) {
     it(`ForecastParamsSchema should accept canonical model: ${model}`, () => {
