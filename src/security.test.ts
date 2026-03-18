@@ -215,6 +215,19 @@ describe('getClientIp', () => {
     const req = { headers: {}, socket: {}, ip: undefined } as unknown as Request;
     expect(getClientIp(req)).toBe('unknown');
   });
+
+  it('handles IPv4-mapped IPv6 socket IP (::ffff:x.x.x.x) from trusted proxy', () => {
+    process.env.TRUSTED_PROXIES = '10.0.0.0/8';
+    const req = makeReqWithSocket('::ffff:10.0.0.1', { 'x-forwarded-for': '203.0.113.5' });
+    expect(getClientIp(req as Request)).toBe('203.0.113.5');
+  });
+
+  it('ignores X-Forwarded-For for IPv4-mapped IPv6 from untrusted proxy', () => {
+    process.env.TRUSTED_PROXIES = '10.0.0.0/8';
+    const req = makeReqWithSocket('::ffff:172.16.0.1', { 'x-forwarded-for': '203.0.113.5' });
+    // normalizeIp strips ::ffff: prefix, so the returned IP is plain IPv4
+    expect(getClientIp(req as Request)).toBe('172.16.0.1');
+  });
 });
 
 // ---------------------------------------------------------------------------

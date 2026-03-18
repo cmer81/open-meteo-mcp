@@ -84,8 +84,16 @@ function isIpTrusted(ip: string, trustedList: string[]): boolean {
  * When TRUSTED_PROXIES is not set, X-Forwarded-For is always ignored to
  * prevent IP spoofing.
  */
+/** Normalizes an IPv4-mapped IPv6 address (::ffff:x.x.x.x) to plain IPv4. */
+function normalizeIp(ip: string): string {
+  const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
+  return mapped ? (mapped[1] ?? ip) : ip;
+}
+
 export function getClientIp(req: Request): string {
-  const socketIp = req.ip ?? (req.socket as { remoteAddress?: string })?.remoteAddress ?? 'unknown';
+  const rawSocketIp =
+    req.ip ?? (req.socket as { remoteAddress?: string })?.remoteAddress ?? 'unknown';
+  const socketIp = rawSocketIp === 'unknown' ? rawSocketIp : normalizeIp(rawSocketIp);
 
   const trustedProxies = process.env.TRUSTED_PROXIES;
   if (trustedProxies) {
