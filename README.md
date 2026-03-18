@@ -150,7 +150,8 @@ If you're using your own Open-Meteo instance:
         "OPEN_METEO_SEASONAL_API_URL": "https://seasonal-api.example.com",
         "OPEN_METEO_ENSEMBLE_API_URL": "https://ensemble-api.example.com",
         "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.example.com",
-        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.example.com"
+        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.example.com",
+        "OPEN_METEO_CLIMATE_API_URL": "https://climate-api.example.com"
       }
     }
   }
