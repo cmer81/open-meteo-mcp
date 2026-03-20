@@ -74,9 +74,9 @@ All share the same parameters as `weather_forecast` (see `open-meteo` skill), pl
 | Parameter | Required | Notes |
 |-----------|----------|-------|
 | `latitude`, `longitude` | Yes | |
+| `models` | Yes | One ensemble model per request (required) |
 | `hourly` | No* | Same variables as `weather_forecast` |
-| `models` | No | One ensemble model per request |
-| `forecast_days` | No | Up to 35 days |
+| `forecast_days` | No | 1–35, default 7 |
 
 **Response format:** Each variable is returned as one array per ensemble member:
 
@@ -111,8 +111,8 @@ Output represents **ensemble anomalies relative to climatology**, not absolute f
 | `latitude`, `longitude` | Yes | |
 | `start_date` | Yes | `YYYY-MM-DD` (supported range: 1950-01-01 to 2050-12-31) |
 | `end_date` | Yes | `YYYY-MM-DD` |
-| `daily` | No* | `temperature_2m_max`, `temperature_2m_min`, `temperature_2m_mean`, `precipitation_sum`, `wind_speed_10m_mean`, `wind_speed_10m_max`, `cloud_cover_mean`, `relative_humidity_2m_mean`, `shortwave_radiation_sum`, `soil_moisture_0_to_10cm_mean`, `pressure_msl_mean` |
-| `models` | No | CMIP6 models (array): `CMCC_CM2_VHR4`, `MRI_AGCM3_2_S`, `EC_Earth3P_HR`, `MPI_ESM1_2_XR`, `NICAM16_8S`, `FGOALS_f3_H`, `HiRAM_SIT_HR` |
+| `daily` | Yes | One or more of: `temperature_2m_max`, `temperature_2m_min`, `temperature_2m_mean`, `precipitation_sum`, `wind_speed_10m_mean`, `wind_speed_10m_max`, `cloud_cover_mean`, `relative_humidity_2m_mean`, `shortwave_radiation_sum`, `soil_moisture_0_to_10cm_mean`, `pressure_msl_mean` |
+| `models` | Yes | CMIP6 models (array, at least one): `CMCC_CM2_VHR4`, `MRI_AGCM3_2_S`, `EC_Earth3P_HR`, `MPI_ESM1_2_XR`, `NICAM16_8S`, `FGOALS_f3_H`, `HiRAM_SIT_HR` |
 
 **Data note:** Dates before the current year represent CMIP6 model simulation output for validation purposes, not observed historical measurements. For real historical weather data, use `weather_archive`.
 

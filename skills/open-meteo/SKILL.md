@@ -43,8 +43,8 @@ Attribution: geocoding data from GeoNames.
 | `hourly` | No* | Hourly time series |
 | `daily` | No* | Day-level aggregates |
 | `current` | No* | Current conditions (any hourly variable) |
-| `forecast_days` | No | 0–16, default 7 |
-| `past_days` | No | 0–92 (recent history without archive) |
+| `forecast_days` | No | 1–16, default 7 |
+| `past_days` | No | 1–92 (recent history without archive) |
 | `timezone` | No** | Required for `daily`; use `auto` for local time |
 | `temperature_unit` | No | `celsius` (default) or `fahrenheit` |
 | `wind_speed_unit` | No | `kmh` (default), `ms`, `mph`, `kn` |
@@ -73,14 +73,12 @@ Use `past_days` on `weather_forecast` for recent history (up to 92 days back). U
 | Parameter | Required | Notes |
 |-----------|----------|-------|
 | `latitude`, `longitude` | Yes | |
-| `hourly` | No* | Hourly air quality variables |
-| `current` | No* | Current conditions |
-| `forecast_days` | No | 0–7, default 5 |
-| `domains` | No | `auto` (default), `cams_europe`, `cams_global` |
+| `hourly` | Yes | Air quality variables (time series) |
+| `forecast_days` | No | 1–16, default 7 |
+| `past_days` | No | 1–7 |
+| `timezone` | No | Use `auto` for local time |
 
 **Common variables:** `pm2_5`, `pm10`, `european_aqi`, `us_aqi`, `carbon_monoxide`, `nitrogen_dioxide`, `ozone`, `sulphur_dioxide`, `dust`, `uv_index`, `alder_pollen`, `birch_pollen`, `grass_pollen`, `mugwort_pollen`, `olive_pollen`, `ragweed_pollen`
-
-\*At least one of `hourly` or `current` is required.
 
 Attribution: air quality data from CAMS (Copernicus Atmosphere Monitoring Service).
 
@@ -124,7 +122,7 @@ Returns altitude in metres.
 
 **"Is the air quality good in Paris right now?"**
 1. `geocoding` with `name: "Paris"` → coordinates
-2. `air_quality` with coordinates + `current: ["european_aqi", "pm2_5", "pm10"]`
+2. `air_quality` with coordinates + `hourly: ["european_aqi", "pm2_5", "pm10"]`
 
 **"What was the average temperature in Berlin in July 2024?"**
 1. `geocoding` with `name: "Berlin"` → coordinates, timezone
