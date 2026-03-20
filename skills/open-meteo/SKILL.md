@@ -88,7 +88,7 @@ Attribution: air quality data from CAMS (Copernicus Atmosphere Monitoring Servic
 | `latitude`, `longitude` | Yes | Use sea/ocean coordinates |
 | `hourly` | No* | Hourly ocean/wave variables |
 | `daily` | No* | Daily aggregates |
-| `forecast_days` | No | 0–7 |
+| `forecast_days` | No | 1–16, default 7 |
 | `timezone` | No | Use `auto` for daily variables |
 
 **Common hourly variables:** `wave_height`, `wave_direction`, `wave_period`, `wind_wave_height`, `wind_wave_direction`, `wind_wave_period`, `swell_wave_height`, `swell_wave_direction`, `swell_wave_period`, `sea_surface_temperature`, `ocean_current_velocity`, `ocean_current_direction`
