@@ -18,9 +18,9 @@ describe('OpenMeteoClient error interceptor', () => {
       'get',
     ).mockRejectedValueOnce(axiosError);
 
-    await expect(
-      client.getForecast({ latitude: 999, longitude: 0 }),
-    ).rejects.toThrow('Invalid request parameters: Invalid latitude');
+    await expect(client.getForecast({ latitude: 999, longitude: 0 })).rejects.toThrow(
+      'Invalid request parameters: Invalid latitude',
+    );
   });
 
   it('throws structured message on HTTP 422', async () => {
@@ -33,9 +33,9 @@ describe('OpenMeteoClient error interceptor', () => {
       'get',
     ).mockRejectedValueOnce(axiosError);
 
-    await expect(
-      client.getForecast({ latitude: 0, longitude: 0 }),
-    ).rejects.toThrow('Invalid parameter value: Cannot initialize model for given coordinates');
+    await expect(client.getForecast({ latitude: 0, longitude: 0 })).rejects.toThrow(
+      'Invalid parameter value: Cannot initialize model for given coordinates',
+    );
   });
 
   it('throws structured message on HTTP 429', async () => {
@@ -48,9 +48,9 @@ describe('OpenMeteoClient error interceptor', () => {
       'get',
     ).mockRejectedValueOnce(axiosError);
 
-    await expect(
-      client.getForecast({ latitude: 48.8566, longitude: 2.3522 }),
-    ).rejects.toThrow('Open-Meteo rate limit reached. Please retry later.');
+    await expect(client.getForecast({ latitude: 48.8566, longitude: 2.3522 })).rejects.toThrow(
+      'Open-Meteo rate limit reached. Please retry later.',
+    );
   });
 
   it('throws structured message on HTTP 500', async () => {
@@ -63,9 +63,9 @@ describe('OpenMeteoClient error interceptor', () => {
       'get',
     ).mockRejectedValueOnce(axiosError);
 
-    await expect(
-      client.getForecast({ latitude: 48.8566, longitude: 2.3522 }),
-    ).rejects.toThrow('Open-Meteo server error (500): Upstream failure');
+    await expect(client.getForecast({ latitude: 48.8566, longitude: 2.3522 })).rejects.toThrow(
+      'Open-Meteo server error (500): Upstream failure',
+    );
   });
 
   it('relays non-Axios errors unchanged', async () => {
@@ -75,9 +75,9 @@ describe('OpenMeteoClient error interceptor', () => {
       'get',
     ).mockRejectedValueOnce(networkError);
 
-    await expect(
-      client.getForecast({ latitude: 48.8566, longitude: 2.3522 }),
-    ).rejects.toThrow('Network timeout');
+    await expect(client.getForecast({ latitude: 48.8566, longitude: 2.3522 })).rejects.toThrow(
+      'Network timeout',
+    );
   });
 
   it('applies to archiveClient (HTTP 400)', async () => {
@@ -91,7 +91,12 @@ describe('OpenMeteoClient error interceptor', () => {
     ).mockRejectedValueOnce(axiosError);
 
     await expect(
-      client.getArchive({ latitude: 48.8566, longitude: 2.3522, start_date: 'bad', end_date: 'bad' }),
+      client.getArchive({
+        latitude: 48.8566,
+        longitude: 2.3522,
+        start_date: 'bad',
+        end_date: 'bad',
+      }),
     ).rejects.toThrow('Invalid request parameters: Invalid date range');
   });
 });
