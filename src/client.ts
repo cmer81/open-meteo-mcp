@@ -69,24 +69,6 @@ export class OpenMeteoClient {
   }
 
   private setupErrorInterceptors(): void {
-    const errorInterceptor = (error: unknown) => {
-      if (axios.isAxiosError(error)) {
-        const status = error.response?.status;
-        const data = error.response?.data as Record<string, unknown> | undefined;
-        const apiMessage =
-          (data?.reason as string | undefined) ??
-          (data?.error as string | undefined) ??
-          error.message;
-
-        if (status === 400) throw new Error(`Invalid request parameters: ${apiMessage}`);
-        if (status === 422) throw new Error(`Invalid parameter value: ${apiMessage}`);
-        if (status === 429) throw new Error('Open-Meteo rate limit reached. Please retry later.');
-        if (status !== undefined && status >= 500)
-          throw new Error(`Open-Meteo server error (${status}): ${apiMessage}`);
-      }
-      return Promise.reject(error);
-    };
-
     for (const instance of [
       this.client,
       this.airQualityClient,
@@ -98,7 +80,7 @@ export class OpenMeteoClient {
       this.floodClient,
       this.climateClient,
     ]) {
-      instance.interceptors.response.use(undefined, errorInterceptor);
+      instance.interceptors.response.use(undefined, OpenMeteoClient.mapHttpError);
     }
   }
 
