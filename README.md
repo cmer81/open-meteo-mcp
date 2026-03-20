@@ -304,6 +304,36 @@ All environment variables are optional and have sensible defaults:
 - `RATE_LIMIT_RPM` - Maximum requests per minute per IP (default: `60`). HTTP transport only.
 - `TRUSTED_PROXIES` - Comma-separated list of trusted proxy IPs or CIDR ranges (e.g. `10.0.0.0/8,172.16.0.0/12`). When set, `X-Forwarded-For` is honoured only for requests originating from these addresses. Leave unset to always use the direct connection IP.
 
+## Skills
+
+The `skills/` directory contains SKILL.md files that help AI assistants use this MCP server effectively. They act as contextual guides — the AI reads the relevant skill to know which tool to call and how to use its parameters.
+
+### Available skills
+
+| Skill | File | Best for |
+|-------|------|----------|
+| `open-meteo` | `skills/open-meteo/SKILL.md` | Everyday weather: forecasts, historical data, air quality, marine conditions, elevation |
+| `open-meteo-advanced` | `skills/open-meteo-advanced/SKILL.md` | Specific models (ECMWF, GFS, DWD ICON…), ensemble uncertainty, seasonal outlooks, climate projections |
+
+### Using with Claude Code (CLI)
+
+Copy the skill(s) to your Claude skills directory:
+
+```bash
+cp -r skills/open-meteo ~/.claude/skills/
+cp -r skills/open-meteo-advanced ~/.claude/skills/
+```
+
+This installs them at `~/.claude/skills/open-meteo/SKILL.md` and `~/.claude/skills/open-meteo-advanced/SKILL.md`. Claude Code will load the relevant skill automatically when you ask weather-related questions.
+
+### Using with Claude Desktop
+
+Upload the SKILL.md file directly as a document in your Claude Desktop conversation:
+- For everyday weather questions: upload `skills/open-meteo/SKILL.md`
+- For model selection, ensemble, or climate projections: upload `skills/open-meteo-advanced/SKILL.md`
+
+Upload one skill per conversation. The AI will use it as a reference guide throughout the session.
+
 ## Usage Examples
 
 ### Geocoding and Location Search
