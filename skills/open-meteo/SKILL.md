@@ -80,6 +80,8 @@ Use `past_days` on `weather_forecast` for recent history (up to 92 days back). U
 
 **Common variables:** `pm2_5`, `pm10`, `european_aqi`, `us_aqi`, `carbon_monoxide`, `nitrogen_dioxide`, `ozone`, `sulphur_dioxide`, `dust`, `uv_index`, `alder_pollen`, `birch_pollen`, `grass_pollen`, `mugwort_pollen`, `olive_pollen`, `ragweed_pollen`
 
+\*At least one of `hourly` or `current` is required.
+
 Attribution: air quality data from CAMS (Copernicus Atmosphere Monitoring Service).
 
 ### `marine_weather`
@@ -110,7 +112,7 @@ Data source: GloFAS (Global Flood Awareness System).
 ### `elevation`
 | Parameter | Required | Notes |
 |-----------|----------|-------|
-| `latitude`, `longitude` | Yes | Single or comma-separated multiple coordinates |
+| `latitude`, `longitude` | Yes | Single WGS84 coordinate pair |
 
 Returns altitude in metres.
 
