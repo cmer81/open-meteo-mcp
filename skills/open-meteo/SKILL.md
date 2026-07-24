@@ -104,6 +104,8 @@ Attribution: air quality data from CAMS (Copernicus Atmosphere Monitoring Servic
 | `length_unit` | No | `metric` (default) or `imperial` for wave height/sea level |
 | `forecast_days` | No | 0–16, default 7 |
 | `past_days` | No | 0–92 |
+| `start_date` / `end_date` | No | `YYYY-MM-DD` alternative to forecast_days |
+| `cell_selection` | No | `land`, `sea`, or `nearest` grid cell preference |
 | `timezone` | No | Use `auto` for daily variables |
 
 \*At least one of `hourly`, `current`, or `daily` is required.

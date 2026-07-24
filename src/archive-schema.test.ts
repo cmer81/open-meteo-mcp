@@ -27,7 +27,6 @@ describe('ArchiveHourlyVariablesSchema', () => {
       'soil_temperature_7_to_28cm',
       'soil_temperature_28_to_100cm',
       'soil_temperature_100_to_255cm',
-      'surface_temperature',
       'wind_speed_100m',
       'wind_direction_100m',
       'dew_point_2m',
@@ -118,7 +117,7 @@ describe('ArchiveParamsSchema uses archive-specific schemas', () => {
       longitude: 2.3522,
       start_date: '2024-01-01',
       end_date: '2024-01-07',
-      hourly: ['soil_moisture_0_to_7cm', 'surface_temperature'],
+      hourly: ['soil_moisture_0_to_7cm', 'soil_temperature_0_to_7cm'],
     };
 
     expect(() => ArchiveParamsSchema.parse(params)).not.toThrow();
@@ -151,10 +150,13 @@ describe('WEATHER_ARCHIVE_TOOL schema alignment', () => {
     expect(hourlyEnum).toContain('soil_moisture_7_to_28cm');
     expect(hourlyEnum).toContain('soil_moisture_28_to_100cm');
     expect(hourlyEnum).toContain('soil_moisture_100_to_255cm');
-    expect(hourlyEnum).toContain('surface_temperature');
     expect(hourlyEnum).toContain('soil_temperature_0_to_7cm');
     expect(hourlyEnum).toContain('wind_speed_100m');
     expect(hourlyEnum).toContain('wind_direction_100m');
+  });
+
+  it('should not include surface_temperature — verified to return null data on the live archive API', () => {
+    expect(hourlyEnum).not.toContain('surface_temperature');
   });
 
   it('should not include forecast-only variables in tool hourly schema', () => {
