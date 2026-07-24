@@ -11,6 +11,7 @@ const VALID_MODELS = [
   'ecmwf_aifs025_single',
   // NCEP/GFS — correct names
   'gfs_seamless',
+  'ncep_gfs_seamless', // spec-documented alias for gfs_seamless, also verified valid on the live API
   'ncep_gfs_global',
   'ncep_hrrr_conus', // was ncep_hrrr_us_conus
   'ncep_nbm_conus', // was ncep_nbm_us_conus
@@ -33,7 +34,6 @@ const INVALID_OLD_MODELS = [
   'ecmwf_ifs_hres_9km',
   'ecmwf_ifs_025',
   'ecmwf_aifs_025_single',
-  'ncep_gfs_seamless',
   'ncep_hrrr_us_conus',
   'ncep_nbm_us_conus',
   'ncep_nam_us_conus',
