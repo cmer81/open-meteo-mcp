@@ -372,6 +372,10 @@ What were the temperatures in London during January 2023?
 What's the current air quality in Beijing with PM2.5 and ozone levels?
 ```
 
+```
+Give me the current European AQI, UV index, and pollen levels (birch, grass, ragweed) in Paris.
+```
+
 ### Marine Weather
 ```
 Get me the wave height and sea surface temperature for coordinates 45.0, -125.0 for the next 5 days.
@@ -380,6 +384,16 @@ Get me the wave height and sea surface temperature for coordinates 45.0, -125.0 
 ### Flood Monitoring
 ```
 Check the river discharge forecast for coordinates 52.5, 13.4 for the next 30 days.
+```
+
+### Seasonal Forecast
+```
+Give me the weekly and monthly temperature outlook for Madrid over the next 4 months.
+```
+
+### Ensemble Forecast
+```
+Compare the ICON and GFS ensemble forecasts for Berlin over the next 5 days and show the spread across members.
 ```
 
 ### Climate Projections
