@@ -119,7 +119,7 @@ describe('Fix 2: date range validation', () => {
   });
 });
 
-describe('Fix 3: EnsembleModelsSchema is a single string', () => {
+describe('Fix 3: EnsembleModelsSchema accepts a single model or an array of models', () => {
   it('should accept a single model string', () => {
     const result = EnsembleParamsSchema.safeParse({
       latitude: 48.8566,
@@ -130,22 +130,22 @@ describe('Fix 3: EnsembleModelsSchema is a single string', () => {
     expect(result.success).toBe(true);
   });
 
-  it('should reject an array of models', () => {
+  it('should accept an array of models (verified valid on the live /v1/ensemble API)', () => {
     const result = EnsembleParamsSchema.safeParse({
       latitude: 48.8566,
       longitude: 2.3522,
       models: ['icon_seamless_eps', 'gfs_seamless'],
       hourly: ['temperature_2m'],
     });
-    expect(result.success).toBe(false);
+    expect(result.success).toBe(true);
   });
 
-  it('tools.ts ENSEMBLE_FORECAST_TOOL models should be type string', () => {
+  it('tools.ts ENSEMBLE_FORECAST_TOOL models should accept string or array', () => {
     const props = ENSEMBLE_FORECAST_TOOL.inputSchema.properties as Record<string, unknown>;
-    const models = props.models as Record<string, unknown>;
-    expect(models.type).toBe('string');
-    expect(models.enum).toBeDefined();
-    expect(Array.isArray(models.enum)).toBe(true);
+    const models = props.models as Record<string, { type?: string; enum?: unknown }[]>;
+    expect(Array.isArray(models.oneOf)).toBe(true);
+    expect(models.oneOf.some((variant) => variant.type === 'string')).toBe(true);
+    expect(models.oneOf.some((variant) => variant.type === 'array')).toBe(true);
   });
 });
 

@@ -3,15 +3,21 @@ import type {
   AirQualityParams,
   ArchiveParams,
   ClimateParams,
+  DwdIconParams,
   EcmwfParams,
   ElevationParams,
   ElevationResponse,
   EnsembleParams,
   FloodParams,
   ForecastParams,
+  GemParams,
   GeocodingParams,
   GeocodingResponse,
+  GfsParams,
+  JmaParams,
   MarineParams,
+  MeteoFranceParams,
+  MetnoParams,
   SeasonalParams,
   WeatherResponse,
 } from './types.js';
@@ -132,21 +138,21 @@ export class OpenMeteoClient {
     return response.data;
   }
 
-  async getDwdIcon(params: ForecastParams): Promise<WeatherResponse> {
+  async getDwdIcon(params: DwdIconParams): Promise<WeatherResponse> {
     const response = await this.client
       .get('/v1/dwd-icon', { params: this.buildParams(params) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getGfs(params: ForecastParams): Promise<WeatherResponse> {
+  async getGfs(params: GfsParams): Promise<WeatherResponse> {
     const response = await this.client
       .get('/v1/gfs', { params: this.buildParams(params) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getMeteoFrance(params: ForecastParams): Promise<WeatherResponse> {
+  async getMeteoFrance(params: MeteoFranceParams): Promise<WeatherResponse> {
     const response = await this.client
       .get('/v1/meteofrance', { params: this.buildParams(params) })
       .catch(OpenMeteoClient.mapHttpError);
@@ -160,21 +166,21 @@ export class OpenMeteoClient {
     return response.data;
   }
 
-  async getJma(params: ForecastParams): Promise<WeatherResponse> {
+  async getJma(params: JmaParams): Promise<WeatherResponse> {
     const response = await this.client
       .get('/v1/jma', { params: this.buildParams(params) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getMetno(params: ForecastParams): Promise<WeatherResponse> {
+  async getMetno(params: MetnoParams): Promise<WeatherResponse> {
     const response = await this.client
       .get('/v1/metno', { params: this.buildParams(params) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getGem(params: ForecastParams): Promise<WeatherResponse> {
+  async getGem(params: GemParams): Promise<WeatherResponse> {
     const response = await this.client
       .get('/v1/gem', { params: this.buildParams(params) })
       .catch(OpenMeteoClient.mapHttpError);

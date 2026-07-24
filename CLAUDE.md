@@ -107,7 +107,7 @@ Uses Zod for runtime validation of:
 - Weather variable enums (prevents invalid parameter combinations)
 - Date format validation (YYYY-MM-DD pattern)
 - Unit constraints (temperature, wind speed, precipitation units)
-- Forecast day limits (varies by service: 7-16 days for most, up to 210 for flood forecasts)
+- Forecast day limits (varies by service: 7-16 days for most, up to 366 for flood forecasts)
 
 ## Weather Model Coverage
 
