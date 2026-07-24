@@ -76,7 +76,12 @@ All share the same parameters as `weather_forecast` (see `open-meteo` skill), pl
 | `latitude`, `longitude` | Yes | |
 | `models` | No | One ensemble model, or an array of models to compare several ensemble systems in one call |
 | `hourly` | No* | Same variables as `weather_forecast` |
-| `forecast_days` | No | 1–35, default 7 |
+| `forecast_days` | No | 0–36, default 7 |
+| `past_days` / `past_hours` | No | Recent history, day or hour granularity |
+| `forecast_hours` | No | Hour-granularity alternative to forecast_days |
+| `start_date` / `end_date` | No | `YYYY-MM-DD` alternative to forecast_days |
+| `temporal_resolution` | No | `native` (default), `hourly`, `hourly_3`, or `hourly_6` |
+| `cell_selection` | No | `land`, `sea`, or `nearest` grid cell preference |
 
 **Response format:** Each variable is returned as one array per ensemble member, suffixed with the model name when `models` contains more than one entry:
 
@@ -98,11 +103,13 @@ To derive uncertainty ranges, calculate min/max/percentiles across all `_memberN
 | Parameter | Required | Notes |
 |-----------|----------|-------|
 | `latitude`, `longitude` | Yes | |
-| `hourly` | No* | 6-hourly variables: `temperature_2m`, `precipitation`, `wind_speed_10m`, `relative_humidity_2m`, `cloud_cover`, `pressure_msl`, `soil_moisture_0_to_10cm` |
-| `daily` | No* | `temperature_2m_max`, `temperature_2m_min`, `temperature_2m_mean`, `precipitation_sum`, `wind_speed_10m_max`, `sunrise`, `sunset`, `weather_code` |
+| `hourly` | No* | 6-hourly variables: `temperature_2m`, `precipitation`, `wind_speed_10m`, `relative_humidity_2m`, `cloud_cover`, `pressure_msl`, `dew_point_2m`, `sea_surface_temperature`, `wave_height`, `soil_moisture_0_to_7cm` and other depth buckets |
+| `daily` | No* | `temperature_2m_max`, `temperature_2m_min`, `temperature_2m_mean`, `sunrise`, `sunset`, `weather_code`, `dew_point_2m_mean`, `sea_surface_temperature_mean` |
 | `weekly` | No* | Weekly means/anomalies, e.g. `temperature_2m_mean`, `temperature_2m_anomaly`, `precipitation_anomaly`, `precipitation_efi` |
 | `monthly` | No* | Monthly means/anomalies, e.g. `temperature_2m_mean`, `temperature_2m_anomaly`, `sea_ice_cover_mean`, `evapotranspiration_mean` |
+| `models` | No | `best_match` (default), `ecmwf_seas5`, `ecmwf_ec46`, or their ensemble-mean variants |
 | `forecast_days` | No | 0–217, default 183 |
+| `cell_selection` | No | `land`, `sea`, or `nearest` grid cell preference |
 
 \*At least one of `hourly`, `daily`, `weekly`, or `monthly` is required.
 
@@ -117,6 +124,8 @@ Output represents **ensemble anomalies relative to climatology**, not absolute f
 | `end_date` | Yes | `YYYY-MM-DD` |
 | `daily` | No | One or more of: `temperature_2m_max`, `temperature_2m_min`, `temperature_2m_mean`, `precipitation_sum`, `wind_speed_10m_mean`, `wind_speed_10m_max`, `cloud_cover_mean`, `relative_humidity_2m_mean`, `shortwave_radiation_sum`, `soil_moisture_0_to_7cm_mean`, `pressure_msl_mean` |
 | `models` | No | CMIP6 models (array): `CMCC_CM2_VHR4`, `MRI_AGCM3_2_S`, `EC_Earth3P_HR`, `MPI_ESM1_2_XR`, `NICAM16_8S`, `FGOALS_f3_H`, `HiRAM_SIT_HR`. Omit to use the server default. |
+| `timezone` | No | Use `auto` for local time |
+| `cell_selection` | No | `land`, `sea`, or `nearest` grid cell preference |
 
 **Data note:** Dates before the current year represent CMIP6 model simulation output for validation purposes, not observed historical measurements. For real historical weather data, use `weather_archive`.
 
