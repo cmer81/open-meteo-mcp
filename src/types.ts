@@ -128,6 +128,144 @@ export const HourlyVariablesSchema = z
       'direct_normal_irradiance_instant',
       'global_tilted_irradiance_instant',
       'terrestrial_radiation_instant',
+      'wind_speed_200m',
+      'wind_direction_200m',
+      'snow_height',
+      'updraft',
+      'lightning_potential',
+      'temperature_1000hPa',
+      'temperature_975hPa',
+      'temperature_950hPa',
+      'temperature_925hPa',
+      'temperature_900hPa',
+      'temperature_850hPa',
+      'temperature_800hPa',
+      'temperature_700hPa',
+      'temperature_600hPa',
+      'temperature_500hPa',
+      'temperature_400hPa',
+      'temperature_300hPa',
+      'temperature_250hPa',
+      'temperature_200hPa',
+      'temperature_150hPa',
+      'temperature_100hPa',
+      'temperature_70hPa',
+      'temperature_50hPa',
+      'temperature_30hPa',
+      'relative_humidity_1000hPa',
+      'relative_humidity_975hPa',
+      'relative_humidity_950hPa',
+      'relative_humidity_925hPa',
+      'relative_humidity_900hPa',
+      'relative_humidity_850hPa',
+      'relative_humidity_800hPa',
+      'relative_humidity_700hPa',
+      'relative_humidity_600hPa',
+      'relative_humidity_500hPa',
+      'relative_humidity_400hPa',
+      'relative_humidity_300hPa',
+      'relative_humidity_250hPa',
+      'relative_humidity_200hPa',
+      'relative_humidity_150hPa',
+      'relative_humidity_100hPa',
+      'relative_humidity_70hPa',
+      'relative_humidity_50hPa',
+      'relative_humidity_30hPa',
+      'cloud_cover_1000hPa',
+      'cloud_cover_975hPa',
+      'cloud_cover_950hPa',
+      'cloud_cover_925hPa',
+      'cloud_cover_900hPa',
+      'cloud_cover_850hPa',
+      'cloud_cover_800hPa',
+      'cloud_cover_700hPa',
+      'cloud_cover_600hPa',
+      'cloud_cover_500hPa',
+      'cloud_cover_400hPa',
+      'cloud_cover_300hPa',
+      'cloud_cover_250hPa',
+      'cloud_cover_200hPa',
+      'cloud_cover_150hPa',
+      'cloud_cover_100hPa',
+      'cloud_cover_70hPa',
+      'cloud_cover_50hPa',
+      'cloud_cover_30hPa',
+      'wind_speed_1000hPa',
+      'wind_speed_975hPa',
+      'wind_speed_950hPa',
+      'wind_speed_925hPa',
+      'wind_speed_900hPa',
+      'wind_speed_850hPa',
+      'wind_speed_800hPa',
+      'wind_speed_700hPa',
+      'wind_speed_600hPa',
+      'wind_speed_500hPa',
+      'wind_speed_400hPa',
+      'wind_speed_300hPa',
+      'wind_speed_250hPa',
+      'wind_speed_200hPa',
+      'wind_speed_150hPa',
+      'wind_speed_100hPa',
+      'wind_speed_70hPa',
+      'wind_speed_50hPa',
+      'wind_speed_30hPa',
+      'wind_direction_1000hPa',
+      'wind_direction_975hPa',
+      'wind_direction_950hPa',
+      'wind_direction_925hPa',
+      'wind_direction_900hPa',
+      'wind_direction_850hPa',
+      'wind_direction_800hPa',
+      'wind_direction_700hPa',
+      'wind_direction_600hPa',
+      'wind_direction_500hPa',
+      'wind_direction_400hPa',
+      'wind_direction_300hPa',
+      'wind_direction_250hPa',
+      'wind_direction_200hPa',
+      'wind_direction_150hPa',
+      'wind_direction_100hPa',
+      'wind_direction_70hPa',
+      'wind_direction_50hPa',
+      'wind_direction_30hPa',
+      'geopotential_height_1000hPa',
+      'geopotential_height_975hPa',
+      'geopotential_height_950hPa',
+      'geopotential_height_925hPa',
+      'geopotential_height_900hPa',
+      'geopotential_height_850hPa',
+      'geopotential_height_800hPa',
+      'geopotential_height_700hPa',
+      'geopotential_height_600hPa',
+      'geopotential_height_500hPa',
+      'geopotential_height_400hPa',
+      'geopotential_height_300hPa',
+      'geopotential_height_250hPa',
+      'geopotential_height_200hPa',
+      'geopotential_height_150hPa',
+      'geopotential_height_100hPa',
+      'geopotential_height_70hPa',
+      'geopotential_height_50hPa',
+      'geopotential_height_30hPa',
+      'vertical_velocity_1000hPa',
+      'vertical_velocity_975hPa',
+      'vertical_velocity_950hPa',
+      'vertical_velocity_925hPa',
+      'vertical_velocity_900hPa',
+      'vertical_velocity_850hPa',
+      'vertical_velocity_800hPa',
+      'vertical_velocity_700hPa',
+      'vertical_velocity_600hPa',
+      'vertical_velocity_500hPa',
+      'vertical_velocity_400hPa',
+      'vertical_velocity_300hPa',
+      'vertical_velocity_250hPa',
+      'vertical_velocity_200hPa',
+      'vertical_velocity_150hPa',
+      'vertical_velocity_100hPa',
+      'vertical_velocity_70hPa',
+      'vertical_velocity_50hPa',
+      'vertical_velocity_30hPa',
     ]),
   )
   .optional();
@@ -207,6 +345,35 @@ export const DailyVariablesSchema = z
 // Union of the model IDs accepted by the live /v1/forecast API: the historical names
 // already in this schema, plus the canonical names from the OpenAPI spec (verified —
 // both families resolve on the live API; Open-Meteo keeps them as aliases).
+export const MinutelyVariablesSchema = z
+  .array(
+    z.enum([
+      'temperature_2m',
+      'relative_humidity_2m',
+      'dew_point_2m',
+      'apparent_temperature',
+      'precipitation',
+      'rain',
+      'snowfall',
+      'snowfall_height',
+      'freezing_level_height',
+      'sunshine_duration',
+      'weather_code',
+      'wind_speed_10m',
+      'wind_speed_80m',
+      'wind_speed_100m',
+      'wind_direction_10m',
+      'wind_direction_80m',
+      'wind_direction_100m',
+      'wind_gusts_10m',
+      'visibility',
+      'cape',
+      'lightning_potential',
+      'is_day',
+    ]),
+  )
+  .optional();
+
 export const ForecastModelsSchema = z
   .enum([
     'best_match',
@@ -307,6 +474,7 @@ export const EnsembleModelsSchema = z
 export const ForecastParamsSchema = CoordinateSchema.extend({
   hourly: HourlyVariablesSchema,
   daily: DailyVariablesSchema,
+  minutely_15: MinutelyVariablesSchema,
   current_weather: z.boolean().optional(),
   current: HourlyVariablesSchema,
   temperature_unit: TemperatureUnitSchema,
@@ -315,7 +483,9 @@ export const ForecastParamsSchema = CoordinateSchema.extend({
   timeformat: TimeFormatSchema,
   timezone: z.string().optional(),
   past_days: z.number().int().min(1).max(92).optional(),
+  past_hours: z.number().int().min(0).optional(),
   forecast_days: z.number().min(1).max(16).optional(),
+  forecast_hours: z.number().int().min(0).optional(),
   start_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -332,6 +502,9 @@ export const ForecastParamsSchema = CoordinateSchema.extend({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
     .optional(),
+  cell_selection: z.enum(['land', 'sea', 'nearest']).optional(),
+  tilt: z.number().min(0).max(90).optional(),
+  azimuth: z.number().min(-180).max(180).optional(),
   models: ForecastModelsSchema,
 });
 
@@ -464,6 +637,19 @@ export const ArchiveHourlyVariablesSchema = z
       'terrestrial_radiation_instant',
       'sunshine_duration',
       'is_day',
+      'boundary_layer_height',
+      'wet_bulb_temperature_2m',
+      'total_column_integrated_water_vapour',
+      'growing_degree_days_base_0_limit_50',
+      'leaf_wetness_probability',
+      'soil_moisture_0_to_100cm',
+      'soil_temperature_0_to_100cm',
+      'soil_moisture_index_0_to_7cm',
+      'soil_moisture_index_7_to_28cm',
+      'soil_moisture_index_28_to_100cm',
+      'soil_moisture_index_0_to_100cm',
+      'global_tilted_irradiance',
+      'global_tilted_irradiance_instant',
     ]),
   )
   .optional();
@@ -491,6 +677,24 @@ export const ArchiveDailyVariablesSchema = z
       'wind_direction_10m_dominant',
       'shortwave_radiation_sum',
       'et0_fao_evapotranspiration',
+      'cloud_cover_mean',
+      'dew_point_2m_mean',
+      'dew_point_2m_max',
+      'dew_point_2m_min',
+      'relative_humidity_2m_mean',
+      'relative_humidity_2m_max',
+      'relative_humidity_2m_min',
+      'pressure_msl_mean',
+      'wind_speed_10m_mean',
+      'wet_bulb_temperature_2m_mean',
+      'vapour_pressure_deficit_max',
+      'soil_moisture_0_to_7cm_mean',
+      'soil_moisture_7_to_28cm_mean',
+      'soil_moisture_28_to_100cm_mean',
+      'soil_moisture_0_to_100cm_mean',
+      'soil_temperature_0_to_7cm_mean',
+      'soil_temperature_7_to_28cm_mean',
+      'soil_temperature_28_to_100cm_mean',
     ]),
   )
   .optional();
@@ -561,6 +765,18 @@ export const AirQualityVariablesSchema = z
       'us_aqi_carbon_monoxide',
       'uv_index',
       'uv_index_clear_sky',
+      'formaldehyde',
+      'glyoxal',
+      'non_methane_volatile_organic_compounds',
+      'pm10_wildfires',
+      'peroxyacyl_nitrates',
+      'secondary_inorganic_aerosol',
+      'residential_elementary_carbon',
+      'total_elementary_carbon',
+      'pm2_5_total_organic_matter',
+      'sea_salt_aerosol',
+      'nitrogen_monoxide',
+      'is_day',
     ]),
   )
   .optional();
@@ -594,10 +810,19 @@ export const AirQualityCurrentVariablesSchema = z
 export const AirQualityParamsSchema = CoordinateSchema.extend({
   hourly: AirQualityVariablesSchema,
   current: AirQualityCurrentVariablesSchema,
+  domains: z.enum(['auto', 'cams_europe', 'cams_global']).optional(),
   timezone: z.string().optional(),
   timeformat: TimeFormatSchema,
   past_days: z.number().min(0).max(92).optional(),
   forecast_days: z.number().min(0).max(7).optional(),
+  start_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  end_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 
 // Marine variables
@@ -649,14 +874,34 @@ export const MarineDailyVariablesSchema = z
   )
   .optional();
 
+export const MarineMinutelyVariablesSchema = z
+  .array(z.enum(['ocean_current_velocity', 'ocean_current_direction', 'sea_level_height_msl']))
+  .optional();
+
+export const MarineModelsSchema = z
+  .enum([
+    'best_match',
+    'meteofrance_wave',
+    'dwd_ewam',
+    'ecmwf_wam',
+    'ncep_gfswave025',
+    'era5_ocean',
+  ])
+  .optional();
+
 export const MarineParamsSchema = CoordinateSchema.extend({
   hourly: MarineHourlyVariablesSchema,
   daily: MarineDailyVariablesSchema,
   current: MarineHourlyVariablesSchema,
+  minutely_15: MarineMinutelyVariablesSchema,
+  models: MarineModelsSchema,
+  length_unit: z.enum(['metric', 'imperial']).optional(),
+  temperature_unit: TemperatureUnitSchema,
+  wind_speed_unit: WindSpeedUnitSchema,
   timezone: z.string().optional(),
   timeformat: TimeFormatSchema,
   past_days: z.number().min(0).max(92).optional(),
-  forecast_days: z.number().min(1).max(16).optional(),
+  forecast_days: z.number().min(0).max(16).optional(),
 });
 
 // Flood variables
@@ -674,8 +919,20 @@ export const FloodDailyVariablesSchema = z
   )
   .optional();
 
+export const FloodModelsSchema = z
+  .enum([
+    'seamless_v4',
+    'forecast_v4',
+    'consolidated_v4',
+    'seamless_v3',
+    'forecast_v3',
+    'consolidated_v3',
+  ])
+  .optional();
+
 export const FloodParamsSchema = CoordinateSchema.extend({
   daily: FloodDailyVariablesSchema,
+  models: FloodModelsSchema,
   timezone: z.string().optional(),
   timeformat: TimeFormatSchema,
   past_days: z.number().min(0).max(92).optional(),
@@ -940,6 +1197,19 @@ export const SeasonalParamsSchema = CoordinateSchema.extend({
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
   timezone: z.string().optional(),
+  timeformat: TimeFormatSchema,
+  cell_selection: z.enum(['land', 'sea', 'nearest']).optional(),
+  models: z
+    .enum([
+      'best_match',
+      'ecmwf_seasonal_seamless',
+      'ecmwf_seas5',
+      'ecmwf_ec46',
+      'ecmwf_seasonal_ensemble_mean_seamless',
+      'ecmwf_seas5_ensemble_mean',
+      'ecmwf_ec46_ensemble_mean',
+    ])
+    .optional(),
 });
 
 // Climate models
@@ -1006,6 +1276,9 @@ export const ClimateParamsSchema = CoordinateSchema.extend({
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
   disable_bias_correction: z.boolean().optional(),
+  timezone: z.string().optional(),
+  timeformat: TimeFormatSchema,
+  cell_selection: z.enum(['land', 'sea', 'nearest']).optional(),
 }).refine((data) => data.start_date <= data.end_date, {
   message: 'start_date must be before or equal to end_date',
   path: ['end_date'],
@@ -1103,15 +1376,36 @@ export const EnsembleParamsSchema = CoordinateSchema.extend({
       ]),
     )
     .optional(),
-  forecast_days: z.number().min(1).max(35).optional(),
+  forecast_days: z.number().min(0).max(36).optional(),
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
   timezone: z.string().optional(),
+  elevation: z.number().optional(),
+  timeformat: TimeFormatSchema,
+  past_days: z.number().int().min(0).max(92).optional(),
+  past_hours: z.number().int().min(0).optional(),
+  forecast_hours: z.number().int().min(0).optional(),
+  start_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  end_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  tilt: z.number().min(0).max(90).optional(),
+  azimuth: z.number().min(-180).max(180).optional(),
+  cell_selection: z.enum(['land', 'sea', 'nearest']).optional(),
+  temporal_resolution: z.enum(['native', 'hourly', 'hourly_3', 'hourly_6']).optional(),
 });
 
-// Elevation parameters
-export const ElevationParamsSchema = CoordinateSchema;
+// Elevation parameters — the API supports batch lookups via comma-separated
+// lat/lon lists, so each coordinate accepts either a single value or an array.
+export const ElevationParamsSchema = z.object({
+  latitude: z.union([z.number().min(-90).max(90), z.array(z.number().min(-90).max(90))]),
+  longitude: z.union([z.number().min(-180).max(180), z.array(z.number().min(-180).max(180))]),
+});
 
 // Response types
 export const WeatherResponseSchema = z.object({

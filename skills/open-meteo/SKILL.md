@@ -43,6 +43,7 @@ Attribution: geocoding data from GeoNames.
 | `hourly` | No* | Hourly time series |
 | `daily` | No* | Day-level aggregates |
 | `current` | No* | Current conditions (any hourly variable) |
+| `minutely_15` | No | 15-minute resolution variables (subset of hourly) |
 | `forecast_days` | No | 1–16, default 7 |
 | `past_days` | No | 1–92 (recent history without archive) |
 | `timezone` | No** | Required for `daily`; use `auto` for local time |
@@ -50,13 +51,16 @@ Attribution: geocoding data from GeoNames.
 | `wind_speed_unit` | No | `kmh` (default), `ms`, `mph`, `kn` |
 | `precipitation_unit` | No | `mm` (default) or `inch` |
 | `start_date` / `end_date` | No | `YYYY-MM-DD` alternative to forecast_days |
+| `past_hours` / `forecast_hours` | No | Hour-granularity alternative to past_days/forecast_days |
+| `cell_selection` | No | `land`, `sea`, or `nearest` grid cell preference |
+| `tilt` / `azimuth` | No | Panel angle for `global_tilted_irradiance` |
 
 \*At least one of `hourly`, `daily`, or `current` is required.
 \*\*Always set `timezone=auto` when requesting `daily` variables.
 
 **One model per request.** For multi-model comparison, use `open-meteo-advanced` model tools in parallel.
 
-**Common hourly variables:** `temperature_2m`, `relative_humidity_2m`, `apparent_temperature`, `precipitation`, `precipitation_probability`, `wind_speed_10m`, `wind_direction_10m`, `weather_code`, `cloud_cover`, `uv_index`, `visibility`, `is_day`
+**Common hourly variables:** `temperature_2m`, `relative_humidity_2m`, `apparent_temperature`, `precipitation`, `precipitation_probability`, `wind_speed_10m`, `wind_direction_10m`, `weather_code`, `cloud_cover`, `uv_index`, `visibility`, `is_day`. Upper-air pressure-level variables are also available, e.g. `temperature_850hPa`, `wind_speed_500hPa`, `geopotential_height_200hPa` (levels: 1000 down to 30 hPa).
 
 **Common daily variables:** `temperature_2m_max`, `temperature_2m_min`, `apparent_temperature_max`, `precipitation_sum`, `precipitation_probability_max`, `wind_speed_10m_max`, `wind_gusts_10m_max`, `weather_code`, `sunrise`, `sunset`, `uv_index_max`, `shortwave_radiation_sum`
 
@@ -66,6 +70,7 @@ Same parameters as `weather_forecast`, with these differences:
 |-----------|----------|-------|
 | `start_date` | Yes | `YYYY-MM-DD` |
 | `end_date` | Yes | `YYYY-MM-DD` |
+| `models` | No | Reanalysis dataset: `best_match` (default), `era5`, `era5_land`, `ecmwf_ifs`, `cerra`, `era5_ensemble` |
 
 Use `past_days` on `weather_forecast` for recent history (up to 92 days back). Use `weather_archive` for older dates.
 
@@ -75,8 +80,10 @@ Use `past_days` on `weather_forecast` for recent history (up to 92 days back). U
 | `latitude`, `longitude` | Yes | |
 | `hourly` | No* | Air quality variables (time series) |
 | `current` | No* | Current conditions (any hourly variable) |
+| `domains` | No | `auto` (default), `cams_europe`, or `cams_global` |
 | `forecast_days` | No | 0–7, default 5 |
 | `past_days` | No | 0–92 |
+| `start_date` / `end_date` | No | `YYYY-MM-DD` alternative to forecast_days |
 | `timezone` | No | Use `auto` for local time |
 
 \*At least one of `hourly` or `current` is required.
@@ -92,7 +99,10 @@ Attribution: air quality data from CAMS (Copernicus Atmosphere Monitoring Servic
 | `hourly` | No* | Hourly ocean/wave variables |
 | `current` | No* | Current ocean/wave conditions |
 | `daily` | No* | Daily aggregates |
-| `forecast_days` | No | 1–16, default 7 |
+| `minutely_15` | No | 15-minute resolution: `ocean_current_velocity`, `ocean_current_direction`, `sea_level_height_msl` |
+| `models` | No | Wave model: `best_match` (default), `meteofrance_wave`, `dwd_ewam`, `ecmwf_wam`, `ncep_gfswave025`, `era5_ocean` |
+| `length_unit` | No | `metric` (default) or `imperial` for wave height/sea level |
+| `forecast_days` | No | 0–16, default 7 |
 | `past_days` | No | 0–92 |
 | `timezone` | No | Use `auto` for daily variables |
 
@@ -107,6 +117,7 @@ Attribution: air quality data from CAMS (Copernicus Atmosphere Monitoring Servic
 |-----------|----------|-------|
 | `latitude`, `longitude` | Yes | |
 | `daily` | No* | River discharge variables |
+| `models` | No | GloFAS version: `seamless_v4` (default), `forecast_v4`, `consolidated_v4`, or the `_v3` equivalents |
 | `forecast_days` | No | 0–366, default 92 |
 | `past_days` | No | 0–92 |
 | `ensemble` | No | Set `true` to return all ensemble members |
@@ -118,9 +129,9 @@ Data source: GloFAS (Global Flood Awareness System).
 ### `elevation`
 | Parameter | Required | Notes |
 |-----------|----------|-------|
-| `latitude`, `longitude` | Yes | Single WGS84 coordinate pair |
+| `latitude`, `longitude` | Yes | A single coordinate pair, or two equal-length arrays for batch lookups |
 
-Returns altitude in metres.
+Returns altitude in metres (one value per coordinate pair).
 
 ## Examples
 
