@@ -36,7 +36,12 @@ jobs:
       - name: Publish to npm
         run: npm publish --provenance
 
+      - name: Read package version
+        id: package-version
+        run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.package-version.outputs.tag }}
           generate_release_notes: true
