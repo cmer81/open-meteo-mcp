@@ -22,13 +22,19 @@ import {
   AirQualityParamsSchema,
   ArchiveParamsSchema,
   ClimateParamsSchema,
+  DwdIconParamsSchema,
   EcmwfParamsSchema,
   ElevationParamsSchema,
   EnsembleParamsSchema,
   FloodParamsSchema,
   ForecastParamsSchema,
+  GemParamsSchema,
   GeocodingParamsSchema,
+  GfsParamsSchema,
+  JmaParamsSchema,
   MarineParamsSchema,
+  MeteoFranceParamsSchema,
+  MetnoParamsSchema,
   SeasonalParamsSchema,
 } from './types.js';
 
@@ -126,17 +132,17 @@ export class OpenMeteoMCPServer {
             break;
           }
           case 'dwd_icon_forecast': {
-            const params = ForecastParamsSchema.parse(args);
+            const params = DwdIconParamsSchema.parse(args);
             result = await this.client.getDwdIcon(params);
             break;
           }
           case 'gfs_forecast': {
-            const params = ForecastParamsSchema.parse(args);
+            const params = GfsParamsSchema.parse(args);
             result = await this.client.getGfs(params);
             break;
           }
           case 'meteofrance_forecast': {
-            const params = ForecastParamsSchema.parse(args);
+            const params = MeteoFranceParamsSchema.parse(args);
             result = await this.client.getMeteoFrance(params);
             break;
           }
@@ -146,17 +152,17 @@ export class OpenMeteoMCPServer {
             break;
           }
           case 'jma_forecast': {
-            const params = ForecastParamsSchema.parse(args);
+            const params = JmaParamsSchema.parse(args);
             result = await this.client.getJma(params);
             break;
           }
           case 'metno_forecast': {
-            const params = ForecastParamsSchema.parse(args);
+            const params = MetnoParamsSchema.parse(args);
             result = await this.client.getMetno(params);
             break;
           }
           case 'gem_forecast': {
-            const params = ForecastParamsSchema.parse(args);
+            const params = GemParamsSchema.parse(args);
             result = await this.client.getGem(params);
             break;
           }

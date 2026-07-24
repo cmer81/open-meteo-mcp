@@ -65,6 +65,7 @@ export const HourlyVariablesSchema = z
       'temperature_2m',
       'relative_humidity_2m',
       'dewpoint_2m',
+      'dew_point_2m',
       'apparent_temperature',
       'precipitation_probability',
       'precipitation',
@@ -167,6 +168,9 @@ export const DailyVariablesSchema = z
       'dewpoint_2m_mean',
       'dewpoint_2m_max',
       'dewpoint_2m_min',
+      'dew_point_2m_mean',
+      'dew_point_2m_max',
+      'dew_point_2m_min',
       'et0_fao_evapotranspiration_sum',
       'growing_degree_days_base_0_limit_50',
       'leaf_wetness_probability_mean',
@@ -274,25 +278,29 @@ export const EcmwfModelsSchema = z.enum(['ecmwf_ifs', 'ecmwf_ifs025', 'best_matc
 
 // Note: the ensemble.yml OpenAPI spec documents dwd_*_eps / cmc_gem_geps names, but
 // the live /v1/ensemble API rejects them (verified) and only accepts the names below.
+const EnsembleModelEnum = z.enum([
+  'icon_seamless_eps',
+  'icon_global_eps',
+  'icon_eu_eps',
+  'icon_d2_eps',
+  'gfs_seamless',
+  'ncep_gefs025',
+  'ncep_gefs05',
+  'ncep_aigefs025',
+  'ecmwf_ifs025_ensemble',
+  'ecmwf_aifs025_ensemble',
+  'gem_global',
+  'bom_access_global',
+  'ukmo_global_ensemble_20km',
+  'ukmo_uk_ensemble_2km',
+  'meteoswiss_icon_ch1',
+  'meteoswiss_icon_ch2',
+]);
+
+// The live /v1/ensemble API accepts a comma-separated list of models (verified),
+// so this accepts either a single model or an array of models.
 export const EnsembleModelsSchema = z
-  .enum([
-    'icon_seamless_eps',
-    'icon_global_eps',
-    'icon_eu_eps',
-    'icon_d2_eps',
-    'gfs_seamless',
-    'ncep_gefs025',
-    'ncep_gefs05',
-    'ncep_aigefs025',
-    'ecmwf_ifs025_ensemble',
-    'ecmwf_aifs025_ensemble',
-    'gem_global',
-    'bom_access_global',
-    'ukmo_global_ensemble_20km',
-    'ukmo_uk_ensemble_2km',
-    'meteoswiss_icon_ch1',
-    'meteoswiss_icon_ch2',
-  ])
+  .union([EnsembleModelEnum, z.array(EnsembleModelEnum)])
   .optional();
 
 // Forecast parameters schema
@@ -330,6 +338,83 @@ export const ForecastParamsSchema = CoordinateSchema.extend({
 // ECMWF-specific parameters schema (uses a different model ID namespace than /v1/forecast)
 export const EcmwfParamsSchema = ForecastParamsSchema.omit({ models: true }).extend({
   models: EcmwfModelsSchema,
+});
+
+// Per-provider model ID subsets, so each model-specific tool only accepts model IDs
+// that are actually valid for its own dedicated endpoint.
+export const DwdIconModelsSchema = z
+  .enum([
+    'dwd_icon_seamless',
+    'dwd_icon_global',
+    'dwd_icon_eu',
+    'dwd_icon_d2',
+    'icon_seamless',
+    'icon_global',
+    'icon_eu',
+    'icon_d2',
+  ])
+  .optional();
+
+export const GfsModelsSchema = z
+  .enum([
+    'gfs_seamless',
+    'ncep_gfs_seamless',
+    'ncep_gfs_global',
+    'ncep_hrrr_conus',
+    'ncep_nbm_conus',
+    'ncep_nam_conus',
+    'ncep_gfs_graphcast025',
+    'ncep_aigfs025',
+    'ncep_hgefs025_ensemble_mean',
+  ])
+  .optional();
+
+export const MeteoFranceModelsSchema = z
+  .enum([
+    'meteofrance_seamless',
+    'meteofrance_arpege_world',
+    'meteofrance_arpege_europe',
+    'meteofrance_arome_france',
+    'meteofrance_arome_france_hd',
+  ])
+  .optional();
+
+export const JmaModelsSchema = z.enum(['jma_seamless', 'jma_msm', 'jma_gsm']).optional();
+
+export const MetnoModelsSchema = z.enum(['metno_seamless', 'metno_nordic']).optional();
+
+export const GemModelsSchema = z
+  .enum([
+    'gem_seamless',
+    'gem_global',
+    'gem_regional',
+    'gem_hrdps_continental',
+    'gem_hrdps_west',
+    'cmc_gem_seamless',
+    'cmc_gem_gdps',
+    'cmc_gem_rdps',
+    'cmc_gem_hrdps',
+    'cmc_gem_hrdps_west',
+  ])
+  .optional();
+
+export const DwdIconParamsSchema = ForecastParamsSchema.omit({ models: true }).extend({
+  models: DwdIconModelsSchema,
+});
+export const GfsParamsSchema = ForecastParamsSchema.omit({ models: true }).extend({
+  models: GfsModelsSchema,
+});
+export const MeteoFranceParamsSchema = ForecastParamsSchema.omit({ models: true }).extend({
+  models: MeteoFranceModelsSchema,
+});
+export const JmaParamsSchema = ForecastParamsSchema.omit({ models: true }).extend({
+  models: JmaModelsSchema,
+});
+export const MetnoParamsSchema = ForecastParamsSchema.omit({ models: true }).extend({
+  models: MetnoModelsSchema,
+});
+export const GemParamsSchema = ForecastParamsSchema.omit({ models: true }).extend({
+  models: GemModelsSchema,
 });
 
 // ERA5 archive-specific variable schemas (different from forecast API)
@@ -410,10 +495,24 @@ export const ArchiveDailyVariablesSchema = z
   )
   .optional();
 
+export const ArchiveModelsSchema = z
+  .enum([
+    'best_match',
+    'era5_seamless',
+    'era5',
+    'era5_land',
+    'ecmwf_ifs',
+    'cerra',
+    'era5_ensemble',
+    'ecmwf_ifs_analysis_long_window',
+  ])
+  .optional();
+
 // Archive parameters schema
 export const ArchiveParamsSchema = CoordinateSchema.extend({
   hourly: ArchiveHourlyVariablesSchema,
   daily: ArchiveDailyVariablesSchema,
+  models: ArchiveModelsSchema,
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   temperature_unit: TemperatureUnitSchema,
@@ -553,9 +652,10 @@ export const MarineDailyVariablesSchema = z
 export const MarineParamsSchema = CoordinateSchema.extend({
   hourly: MarineHourlyVariablesSchema,
   daily: MarineDailyVariablesSchema,
+  current: MarineHourlyVariablesSchema,
   timezone: z.string().optional(),
   timeformat: TimeFormatSchema,
-  past_days: z.number().min(1).max(7).optional(),
+  past_days: z.number().min(0).max(92).optional(),
   forecast_days: z.number().min(1).max(16).optional(),
 });
 
@@ -578,8 +678,8 @@ export const FloodParamsSchema = CoordinateSchema.extend({
   daily: FloodDailyVariablesSchema,
   timezone: z.string().optional(),
   timeformat: TimeFormatSchema,
-  past_days: z.number().min(1).max(7).optional(),
-  forecast_days: z.number().min(1).max(210).optional(),
+  past_days: z.number().min(0).max(92).optional(),
+  forecast_days: z.number().min(0).max(366).optional(),
   start_date: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -597,22 +697,54 @@ export const SeasonalParamsSchema = CoordinateSchema.extend({
   hourly: z
     .array(
       z.enum([
-        'pressure_msl',
         'temperature_2m',
         'temperature_2m_max',
         'temperature_2m_min',
-        'shortwave_radiation',
-        'cloud_cover',
+        'dew_point_2m',
+        'pressure_msl',
+        'sea_surface_temperature',
+        'snowfall_water_equivalent',
         'precipitation',
+        'rain',
         'showers',
+        'snowfall',
+        'cloud_cover',
         'wind_speed_10m',
         'wind_direction_10m',
+        'wind_speed_100m',
+        'wind_direction_100m',
+        'wind_speed_200m',
+        'wind_direction_200m',
         'relative_humidity_2m',
-        'soil_temperature_0_to_10cm',
-        'soil_moisture_0_to_10cm',
-        'soil_moisture_10_to_40cm',
-        'soil_moisture_40_to_100cm',
-        'soil_moisture_100_to_200cm',
+        'apparent_temperature',
+        'et0_fao_evapotranspiration',
+        'vapour_pressure_deficit',
+        'weather_code',
+        'sunshine_duration',
+        'wave_height',
+        'wave_direction',
+        'wave_period',
+        'wave_peak_period',
+        'soil_temperature_0_to_7cm',
+        'soil_temperature_7_to_28cm',
+        'soil_temperature_28_to_100cm',
+        'soil_temperature_100_to_255cm',
+        'soil_moisture_0_to_7cm',
+        'soil_moisture_7_to_28cm',
+        'soil_moisture_28_to_100cm',
+        'soil_moisture_100_to_255cm',
+        'shortwave_radiation',
+        'direct_radiation',
+        'diffuse_radiation',
+        'direct_normal_irradiance',
+        'global_tilted_irradiance',
+        'terrestrial_radiation',
+        'shortwave_radiation_instant',
+        'direct_radiation_instant',
+        'diffuse_radiation_instant',
+        'direct_normal_irradiance_instant',
+        'global_tilted_irradiance_instant',
+        'terrestrial_radiation_instant',
       ]),
     )
     .optional(),
@@ -825,28 +957,51 @@ export const ClimateModelsSchema = z.array(
 
 // Climate projection parameters
 export const ClimateParamsSchema = CoordinateSchema.extend({
-  daily: z.array(
-    z.enum([
-      'temperature_2m_max',
-      'temperature_2m_min',
-      'temperature_2m_mean',
-      'cloud_cover_mean',
-      'relative_humidity_2m_max',
-      'relative_humidity_2m_min',
-      'relative_humidity_2m_mean',
-      'soil_moisture_0_to_10cm_mean',
-      'precipitation_sum',
-      'rain_sum',
-      'snowfall_sum',
-      'wind_speed_10m_mean',
-      'wind_speed_10m_max',
-      'pressure_msl_mean',
-      'shortwave_radiation_sum',
-    ]),
-  ),
+  daily: z
+    .array(
+      z.enum([
+        'temperature_2m_max',
+        'temperature_2m_min',
+        'temperature_2m_mean',
+        'cloud_cover_mean',
+        'relative_humidity_2m_max',
+        'relative_humidity_2m_min',
+        'relative_humidity_2m_mean',
+        'precipitation_sum',
+        'rain_sum',
+        'snowfall_sum',
+        'snowfall_water_equivalent_sum',
+        'wind_speed_10m_mean',
+        'wind_speed_10m_max',
+        'wind_gusts_10m_mean',
+        'wind_gusts_10m_max',
+        'pressure_msl_mean',
+        'shortwave_radiation_sum',
+        'et0_fao_evapotranspiration_sum',
+        'vapour_pressure_deficit_max',
+        'dew_point_2m_mean',
+        'dew_point_2m_max',
+        'dew_point_2m_min',
+        'growing_degree_days_base_0_limit_50',
+        'leaf_wetness_probability_mean',
+        'daylight_duration',
+        'soil_moisture_0_to_7cm_mean',
+        'soil_moisture_7_to_28cm_mean',
+        'soil_moisture_28_to_100cm_mean',
+        'soil_moisture_0_to_100cm_mean',
+        'soil_moisture_index_0_to_7cm_mean',
+        'soil_moisture_index_7_to_28cm_mean',
+        'soil_moisture_index_28_to_100cm_mean',
+        'soil_temperature_0_to_7cm_mean',
+        'soil_temperature_7_to_28cm_mean',
+        'soil_temperature_28_to_100cm_mean',
+        'soil_temperature_0_to_100cm_mean',
+      ]),
+    )
+    .optional(),
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  models: ClimateModelsSchema,
+  models: ClimateModelsSchema.optional(),
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
@@ -890,8 +1045,8 @@ export const EnsembleParamsSchema = CoordinateSchema.extend({
         'shortwave_radiation',
         'uv_index',
         'uv_index_clear_sky',
-        'temperature_3h_min_2m',
-        'temperature_3h_max_2m',
+        'temperature_2m_min',
+        'temperature_2m_max',
         'wet_bulb_temperature_2m',
         'convective_inhibition',
         'freezing_level_height',
@@ -986,6 +1141,12 @@ export const ElevationResponseSchema = z.object({
 
 export type ForecastParams = z.infer<typeof ForecastParamsSchema>;
 export type EcmwfParams = z.infer<typeof EcmwfParamsSchema>;
+export type DwdIconParams = z.infer<typeof DwdIconParamsSchema>;
+export type GfsParams = z.infer<typeof GfsParamsSchema>;
+export type MeteoFranceParams = z.infer<typeof MeteoFranceParamsSchema>;
+export type JmaParams = z.infer<typeof JmaParamsSchema>;
+export type MetnoParams = z.infer<typeof MetnoParamsSchema>;
+export type GemParams = z.infer<typeof GemParamsSchema>;
 export type ArchiveParams = z.infer<typeof ArchiveParamsSchema>;
 export type AirQualityParams = z.infer<typeof AirQualityParamsSchema>;
 export type MarineParams = z.infer<typeof MarineParamsSchema>;
