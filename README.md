@@ -29,7 +29,7 @@ This MCP server provides complete access to Open-Meteo APIs, including:
 
 ### Advanced Forecasting Tools
 - **Flood Forecast** (`flood_forecast`) - River discharge and flood forecasts from GloFAS (Global Flood Awareness System)
-- **Seasonal Forecast** (`seasonal_forecast`) - Long-range forecasts up to 9 months ahead
+- **Seasonal Forecast** (`seasonal_forecast`) - Long-range forecasts up to ~7 months ahead
 - **Climate Projections** (`climate_projection`) - CMIP6 climate change projections for different warming scenarios
 - **Ensemble Forecast** (`ensemble_forecast`) - Multiple model runs showing forecast uncertainty
 

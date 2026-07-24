@@ -822,7 +822,7 @@ export const FLOOD_FORECAST_TOOL: Tool = {
 export const SEASONAL_FORECAST_TOOL: Tool = {
   name: 'seasonal_forecast',
   description:
-    'Get long-range seasonal forecasts for temperature and precipitation up to 9 months ahead.',
+    'Get long-range seasonal forecasts for temperature and precipitation up to ~7 months ahead.',
   inputSchema: {
     type: 'object',
     properties: {

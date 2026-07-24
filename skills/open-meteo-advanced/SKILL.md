@@ -12,7 +12,7 @@ Use this skill when:
 - The user wants to **compare models** (make parallel calls, one per model tool)
 - Forecasts **beyond 16 days** are needed
 - **Ensemble uncertainty** / confidence intervals are requested
-- A **seasonal outlook** (1–9 months) or **climate projection** (to 2050) is needed
+- A **seasonal outlook** (1–7 months) or **climate projection** (to 2050) is needed
 
 For everyday weather questions, use `open-meteo` instead.
 
@@ -28,7 +28,7 @@ For everyday weather questions, use `open-meteo` instead.
 | `metno_forecast` | MET Norway | Nordic-primary (global extension via blending) | 2.5 days | Nordic region precision |
 | `gem_forecast` | Environment Canada GEM | North America | 2–10 days | Canada |
 | `ensemble_forecast` | Multi-model | Global | 35 days | Forecast uncertainty ranges |
-| `seasonal_forecast` | ECMWF SEAS5 | Global | 45–274 days | 1–9 month outlook |
+| `seasonal_forecast` | ECMWF SEAS5 | Global | up to 217 days | 1–7 month outlook |
 | `climate_projection` | CMIP6 | Global | 1950–2050 | Multi-decade scenarios |
 
 **Geographic constraints:**
@@ -99,8 +99,12 @@ To derive uncertainty ranges, calculate min/max/percentiles across all `_memberN
 |-----------|----------|-------|
 | `latitude`, `longitude` | Yes | |
 | `hourly` | No* | 6-hourly variables: `temperature_2m`, `precipitation`, `wind_speed_10m`, `relative_humidity_2m`, `cloud_cover`, `pressure_msl`, `soil_moisture_0_to_10cm` |
-| `daily` | No* | `temperature_2m_max`, `temperature_2m_min`, `precipitation_sum`, `wind_speed_10m_max` |
-| `forecast_days` | No | `45`, `92` (default), `183`, or `274` |
+| `daily` | No* | `temperature_2m_max`, `temperature_2m_min`, `temperature_2m_mean`, `precipitation_sum`, `wind_speed_10m_max`, `sunrise`, `sunset`, `weather_code` |
+| `weekly` | No* | Weekly means/anomalies, e.g. `temperature_2m_mean`, `temperature_2m_anomaly`, `precipitation_anomaly`, `precipitation_efi` |
+| `monthly` | No* | Monthly means/anomalies, e.g. `temperature_2m_mean`, `temperature_2m_anomaly`, `sea_ice_cover_mean`, `evapotranspiration_mean` |
+| `forecast_days` | No | 0–217, default 183 |
+
+\*At least one of `hourly`, `daily`, `weekly`, or `monthly` is required.
 
 Output represents **ensemble anomalies relative to climatology**, not absolute forecasts.
 
