@@ -13,6 +13,55 @@ export const WindSpeedUnitSchema = z.enum(['kmh', 'ms', 'mph', 'kn']).default('k
 export const PrecipitationUnitSchema = z.enum(['mm', 'inch']).default('mm');
 export const TimeFormatSchema = z.enum(['iso8601', 'unixtime']).default('iso8601');
 
+// Shared field schemas for parameters whose meaning isn't obvious from the name
+// alone — described once here and reused across the per-endpoint schemas below,
+// so the published JSON schema explains them to callers instead of exposing bare
+// type/enum/min/max constraints.
+export const CellSelectionSchema = z
+  .enum(['land', 'sea', 'nearest'])
+  .describe(
+    'Grid-cell preference when the coordinate sits near a coastline: "land" prefers a land grid cell, "sea" prefers a sea grid cell, "nearest" picks whichever grid cell is closest regardless of land or sea.',
+  );
+
+export const TiltSchema = z
+  .number()
+  .min(0)
+  .max(90)
+  .describe(
+    'Tilt angle of a solar panel in degrees from horizontal (0 = flat, 90 = vertical), used together with `azimuth` to compute panel-plane irradiance (global_tilted_irradiance).',
+  );
+
+export const AzimuthSchema = z
+  .number()
+  .min(-180)
+  .max(180)
+  .describe(
+    'Solar panel orientation in degrees (0 = south, -90 = east, 90 = west, ±180 = north), used together with `tilt` to compute panel-plane irradiance (global_tilted_irradiance).',
+  );
+
+const DATE_FORMAT_MESSAGE = 'Must be a date in YYYY-MM-DD format (e.g. "2024-03-15").';
+export const DateStringSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, DATE_FORMAT_MESSAGE)
+  .describe('Date in YYYY-MM-DD format.');
+
+const HOURLY_TIMESTAMP_FORMAT_MESSAGE =
+  'Must be an hourly timestamp in YYYY-MM-DDTHH:MM format (e.g. "2024-03-15T14:00").';
+export const HourlyTimestampSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/, HOURLY_TIMESTAMP_FORMAT_MESSAGE)
+  .describe(
+    'Hourly timestamp in YYYY-MM-DDTHH:MM format, for selecting a sub-day range at hourly granularity (alternative to start_date/end_date).',
+  );
+
+const PAST_DAYS_DESCRIPTION =
+  'Number of days before today to include in the response, in addition to the forecast period.';
+const PAST_HOURS_DESCRIPTION =
+  'Number of hours before the current hour to include; an hourly-resolution alternative to `past_days`.';
+const FORECAST_DAYS_DESCRIPTION = 'Number of days ahead to forecast, starting from today.';
+const FORECAST_HOURS_DESCRIPTION =
+  'Number of hours ahead to forecast; an hourly-resolution alternative to `forecast_days`.';
+
 // Geocoding schemas
 export const GeocodingParamsSchema = z
   .object({
@@ -486,29 +535,17 @@ export const ForecastParamsSchema = CoordinateSchema.extend({
   precipitation_unit: PrecipitationUnitSchema,
   timeformat: TimeFormatSchema,
   timezone: z.string().optional(),
-  past_days: z.number().int().min(1).max(92).optional(),
-  past_hours: z.number().int().min(0).optional(),
-  forecast_days: z.number().min(1).max(16).optional(),
-  forecast_hours: z.number().int().min(0).optional(),
-  start_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  end_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  start_hour: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
-    .optional(),
-  end_hour: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/)
-    .optional(),
-  cell_selection: z.enum(['land', 'sea', 'nearest']).optional(),
-  tilt: z.number().min(0).max(90).optional(),
-  azimuth: z.number().min(-180).max(180).optional(),
+  past_days: z.number().int().min(1).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
+  past_hours: z.number().int().min(0).describe(PAST_HOURS_DESCRIPTION).optional(),
+  forecast_days: z.number().min(1).max(16).describe(FORECAST_DAYS_DESCRIPTION).optional(),
+  forecast_hours: z.number().int().min(0).describe(FORECAST_HOURS_DESCRIPTION).optional(),
+  start_date: DateStringSchema.optional(),
+  end_date: DateStringSchema.optional(),
+  start_hour: HourlyTimestampSchema.optional(),
+  end_hour: HourlyTimestampSchema.optional(),
+  cell_selection: CellSelectionSchema.optional(),
+  tilt: TiltSchema.optional(),
+  azimuth: AzimuthSchema.optional(),
   models: ForecastModelsSchema,
 });
 
@@ -720,17 +757,17 @@ export const ArchiveParamsSchema = CoordinateSchema.extend({
   hourly: ArchiveHourlyVariablesSchema,
   daily: ArchiveDailyVariablesSchema,
   models: ArchiveModelsSchema,
-  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  start_date: DateStringSchema,
+  end_date: DateStringSchema,
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
   timeformat: TimeFormatSchema,
   timezone: z.string().optional(),
   elevation: z.number().optional(),
-  tilt: z.number().min(0).max(90).optional(),
-  azimuth: z.number().min(-180).max(180).optional(),
-  cell_selection: z.enum(['land', 'sea', 'nearest']).optional(),
+  tilt: TiltSchema.optional(),
+  azimuth: AzimuthSchema.optional(),
+  cell_selection: CellSelectionSchema.optional(),
 }).refine((data) => data.start_date <= data.end_date, {
   message: 'start_date must be before or equal to end_date',
   path: ['end_date'],
@@ -820,16 +857,10 @@ export const AirQualityParamsSchema = CoordinateSchema.extend({
   domains: z.enum(['auto', 'cams_europe', 'cams_global']).optional(),
   timezone: z.string().optional(),
   timeformat: TimeFormatSchema,
-  past_days: z.number().min(0).max(92).optional(),
-  forecast_days: z.number().min(0).max(7).optional(),
-  start_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  end_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  past_days: z.number().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
+  forecast_days: z.number().min(0).max(7).describe(FORECAST_DAYS_DESCRIPTION).optional(),
+  start_date: DateStringSchema.optional(),
+  end_date: DateStringSchema.optional(),
 });
 
 // Marine variables
@@ -907,17 +938,11 @@ export const MarineParamsSchema = CoordinateSchema.extend({
   wind_speed_unit: WindSpeedUnitSchema,
   timezone: z.string().optional(),
   timeformat: TimeFormatSchema,
-  past_days: z.number().min(0).max(92).optional(),
-  forecast_days: z.number().min(0).max(16).optional(),
-  start_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  end_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  cell_selection: z.enum(['land', 'sea', 'nearest']).optional(),
+  past_days: z.number().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
+  forecast_days: z.number().min(0).max(16).describe(FORECAST_DAYS_DESCRIPTION).optional(),
+  start_date: DateStringSchema.optional(),
+  end_date: DateStringSchema.optional(),
+  cell_selection: CellSelectionSchema.optional(),
 });
 
 // Flood variables
@@ -951,18 +976,12 @@ export const FloodParamsSchema = CoordinateSchema.extend({
   models: FloodModelsSchema,
   timezone: z.string().optional(),
   timeformat: TimeFormatSchema,
-  past_days: z.number().min(0).max(92).optional(),
-  forecast_days: z.number().min(0).max(366).optional(),
-  start_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  end_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  past_days: z.number().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
+  forecast_days: z.number().min(0).max(366).describe(FORECAST_DAYS_DESCRIPTION).optional(),
+  start_date: DateStringSchema.optional(),
+  end_date: DateStringSchema.optional(),
   ensemble: z.boolean().optional(),
-  cell_selection: z.enum(['land', 'sea', 'nearest']).default('nearest').optional(),
+  cell_selection: CellSelectionSchema.default('nearest').optional(),
 });
 
 // Seasonal forecast parameters
@@ -1199,22 +1218,16 @@ export const SeasonalParamsSchema = CoordinateSchema.extend({
       ]),
     )
     .optional(),
-  forecast_days: z.number().int().min(0).max(217).optional(),
-  past_days: z.number().min(0).max(92).optional(),
-  start_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  end_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  forecast_days: z.number().int().min(0).max(217).describe(FORECAST_DAYS_DESCRIPTION).optional(),
+  past_days: z.number().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
+  start_date: DateStringSchema.optional(),
+  end_date: DateStringSchema.optional(),
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
   timezone: z.string().optional(),
   timeformat: TimeFormatSchema,
-  cell_selection: z.enum(['land', 'sea', 'nearest']).optional(),
+  cell_selection: CellSelectionSchema.optional(),
   models: z
     .enum([
       'best_match',
@@ -1285,8 +1298,8 @@ export const ClimateParamsSchema = CoordinateSchema.extend({
       ]),
     )
     .optional(),
-  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  start_date: DateStringSchema,
+  end_date: DateStringSchema,
   models: ClimateModelsSchema.optional(),
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
@@ -1294,7 +1307,7 @@ export const ClimateParamsSchema = CoordinateSchema.extend({
   disable_bias_correction: z.boolean().optional(),
   timezone: z.string().optional(),
   timeformat: TimeFormatSchema,
-  cell_selection: z.enum(['land', 'sea', 'nearest']).optional(),
+  cell_selection: CellSelectionSchema.optional(),
 }).refine((data) => data.start_date <= data.end_date, {
   message: 'start_date must be before or equal to end_date',
   path: ['end_date'],
@@ -1507,27 +1520,21 @@ export const EnsembleParamsSchema = CoordinateSchema.extend({
       ]),
     )
     .optional(),
-  forecast_days: z.number().min(0).max(36).optional(),
+  forecast_days: z.number().min(0).max(36).describe(FORECAST_DAYS_DESCRIPTION).optional(),
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
   timezone: z.string().optional(),
   elevation: z.number().optional(),
   timeformat: TimeFormatSchema,
-  past_days: z.number().int().min(0).max(92).optional(),
-  past_hours: z.number().int().min(0).optional(),
-  forecast_hours: z.number().int().min(0).optional(),
-  start_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  end_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  tilt: z.number().min(0).max(90).optional(),
-  azimuth: z.number().min(-180).max(180).optional(),
-  cell_selection: z.enum(['land', 'sea', 'nearest']).optional(),
+  past_days: z.number().int().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
+  past_hours: z.number().int().min(0).describe(PAST_HOURS_DESCRIPTION).optional(),
+  forecast_hours: z.number().int().min(0).describe(FORECAST_HOURS_DESCRIPTION).optional(),
+  start_date: DateStringSchema.optional(),
+  end_date: DateStringSchema.optional(),
+  tilt: TiltSchema.optional(),
+  azimuth: AzimuthSchema.optional(),
+  cell_selection: CellSelectionSchema.optional(),
   temporal_resolution: z.enum(['native', 'hourly', 'hourly_3', 'hourly_6']).optional(),
 });
 
