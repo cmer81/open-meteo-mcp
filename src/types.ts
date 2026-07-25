@@ -1,10 +1,12 @@
 import { z } from 'zod';
 
 // Base parameter schemas
-export const CoordinateSchema = z.object({
-  latitude: z.number().min(-90).max(90),
-  longitude: z.number().min(-180).max(180),
-});
+export const CoordinateSchema = z
+  .object({
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
+  })
+  .strict();
 
 export const TemperatureUnitSchema = z.enum(['celsius', 'fahrenheit']).default('celsius');
 export const WindSpeedUnitSchema = z.enum(['kmh', 'ms', 'mph', 'kn']).default('kmh');
@@ -12,16 +14,18 @@ export const PrecipitationUnitSchema = z.enum(['mm', 'inch']).default('mm');
 export const TimeFormatSchema = z.enum(['iso8601', 'unixtime']).default('iso8601');
 
 // Geocoding schemas
-export const GeocodingParamsSchema = z.object({
-  name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
-  count: z.number().min(1).max(100).default(10).optional(),
-  language: z.string().optional(),
-  countryCode: z
-    .string()
-    .regex(/^[A-Z]{2}$/, 'Le code pays doit être au format ISO-3166-1 alpha2 (ex: FR, DE, US)')
-    .optional(),
-  format: z.enum(['json', 'protobuf']).default('json').optional(),
-});
+export const GeocodingParamsSchema = z
+  .object({
+    name: z.string().min(2, 'Le nom doit contenir au moins 2 caractères'),
+    count: z.number().min(1).max(100).default(10).optional(),
+    language: z.string().optional(),
+    countryCode: z
+      .string()
+      .regex(/^[A-Z]{2}$/, 'Le code pays doit être au format ISO-3166-1 alpha2 (ex: FR, DE, US)')
+      .optional(),
+    format: z.enum(['json', 'protobuf']).default('json').optional(),
+  })
+  .strict();
 
 export const LocationSchema = z.object({
   id: z.number(),
@@ -1529,10 +1533,12 @@ export const EnsembleParamsSchema = CoordinateSchema.extend({
 
 // Elevation parameters — the API supports batch lookups via comma-separated
 // lat/lon lists, so each coordinate accepts either a single value or an array.
-export const ElevationParamsSchema = z.object({
-  latitude: z.union([z.number().min(-90).max(90), z.array(z.number().min(-90).max(90))]),
-  longitude: z.union([z.number().min(-180).max(180), z.array(z.number().min(-180).max(180))]),
-});
+export const ElevationParamsSchema = z
+  .object({
+    latitude: z.union([z.number().min(-90).max(90), z.array(z.number().min(-90).max(90))]),
+    longitude: z.union([z.number().min(-180).max(180), z.array(z.number().min(-180).max(180))]),
+  })
+  .strict();
 
 // Response types
 export const WeatherResponseSchema = z.object({
