@@ -217,11 +217,11 @@ docker run -d \
 curl http://localhost:3000/health
 ```
 
-Available tags:
+Available tags (no `v` prefix — the git tag `v2.0.0` publishes the image as `2.0.0`):
 - `latest` - Latest stable release
-- `v1.x.x` - Specific version (e.g., `v1.1.3`)
-- `1` - Latest v1.x.x release
-- `1.1` - Latest v1.1.x release
+- `2.0.0` - Specific version
+- `2.0` - Latest 2.0.x release
+- `2` - Latest 2.x.x release
 
 #### Using Docker Compose
 
