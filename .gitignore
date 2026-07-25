@@ -107,3 +107,7 @@ Thumbs.db
 
 # Git worktrees
 .worktrees/
+
+# Python (evaluation harness)
+__pycache__/
+*.pyc
