@@ -508,6 +508,29 @@ npm run typecheck
 npm run lint
 ```
 
+## Evaluations
+
+The `evals/` directory holds an LLM-usability benchmark for this server's tools — a different check than `npm test`. Unit tests verify the code is correct; this verifies that an LLM given *only* this server's tools (no other context) can actually complete realistic tasks with them.
+
+- `evals/evaluation.xml` — 10 independent, read-only question/answer pairs built on stable historical data (ERA5 archive, CMIP6 projections, geocoding, elevation), so the expected answers never change over time.
+- `evals/scripts/evaluation.py` — harness that launches the server, lets an agent answer each question using only its tools, and compares the answer against the expected one.
+
+### Running the evaluation
+
+```bash
+npm run build
+pip install -r evals/scripts/requirements.txt
+export ANTHROPIC_API_KEY=your_api_key_here
+
+npm run eval
+# or directly:
+python3 evals/scripts/evaluation.py -t stdio -c node -a dist/index.js evals/evaluation.xml
+```
+
+This calls the real Anthropic API for every question, so it consumes tokens/credits — it's a manual quality check for tool design, not part of CI.
+
+When adding, removing, or renaming a tool, or materially changing a tool's description or schema, consider adding or updating a `qa_pair` in `evals/evaluation.xml` that exercises it.
+
 ## Project Structure
 
 ```

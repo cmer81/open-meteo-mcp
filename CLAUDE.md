@@ -72,6 +72,14 @@ npm run typecheck
 npm run lint
 ```
 
+## Evaluations
+
+`evals/evaluation.xml` is an LLM-usability benchmark, not a unit test suite — it checks whether an LLM equipped with *only* this server's tools can answer real, complex questions using them. Run it with `npm run eval` (requires `ANTHROPIC_API_KEY` and `pip install -r evals/scripts/requirements.txt`; it calls the real Anthropic API, so it is a manual check, not part of CI).
+
+Only `weather_archive`, `climate_projection`, `geocoding`, and `elevation` are exercised: the forecast/marine/flood/air-quality tools return live, "current" data with no historical equivalent, so their outputs would drift and can't produce a stable expected answer.
+
+When adding, removing, or renaming a tool, or materially changing a tool's description or schema, add or update a `qa_pair` in `evals/evaluation.xml` that exercises it.
+
 ## Configuration
 
 The server uses environment variables for API endpoints with fallback defaults:
