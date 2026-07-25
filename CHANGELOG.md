@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [2.0.1] - 2026-07-26
+
+Non-breaking schema documentation improvement.
+
+### Changed
+
+- **Ambiguous tool parameters now carry a description in the published JSON
+  schema.** `cell_selection`, `tilt`, `azimuth`, `past_days`/`past_hours`,
+  `forecast_days`/`forecast_hours`, and the date/hour string parameters
+  previously exposed only their bare type/enum/min-max constraints, with
+  nothing explaining what they mean (e.g. `tilt`/`azimuth` are for solar-panel
+  irradiance calculations; `cell_selection` controls land/sea grid-cell
+  preference near coastlines). They're now documented via shared, reusable Zod
+  schemas applied across every endpoint that has them.
+- Invalid `start_date`/`end_date`/`start_hour`/`end_hour` values now return a
+  clear message (e.g. `Must be a date in YYYY-MM-DD format (e.g.
+  "2024-03-15")`) instead of Zod's generic validation error.
+
 ## [2.0.0] - 2026-07-25
 
 Security and correctness release. Everything breaking here is confined to the
@@ -94,4 +112,5 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[2.0.1]: https://github.com/cmer81/open-meteo-mcp/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/cmer81/open-meteo-mcp/compare/v1.7.0...v2.0.0
