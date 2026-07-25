@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { WEATHER_FORECAST_TOOL } from './tools.js';
 import { ForecastParamsSchema } from './types.js';
 
 // Canonical model names verified against the Open-Meteo API (/v1/forecast)
@@ -49,10 +48,6 @@ const INVALID_OLD_MODELS = [
 ];
 
 describe('ForecastModelsSchema — canonical API model names', () => {
-  const toolModelsEnum: string[] =
-    (WEATHER_FORECAST_TOOL.inputSchema.properties as Record<string, { enum?: string[] }>).models
-      ?.enum ?? [];
-
   for (const model of VALID_MODELS) {
     it(`ForecastParamsSchema should accept canonical model: ${model}`, () => {
       const result = ForecastParamsSchema.safeParse({
@@ -61,10 +56,6 @@ describe('ForecastModelsSchema — canonical API model names', () => {
         models: model,
       });
       expect(result.success).toBe(true);
-    });
-
-    it(`WEATHER_FORECAST_TOOL schema should include canonical model: ${model}`, () => {
-      expect(toolModelsEnum).toContain(model);
     });
   }
 
@@ -76,10 +67,6 @@ describe('ForecastModelsSchema — canonical API model names', () => {
         models: model,
       });
       expect(result.success).toBe(false);
-    });
-
-    it(`WEATHER_FORECAST_TOOL schema should NOT include invalid old model: ${model}`, () => {
-      expect(toolModelsEnum).not.toContain(model);
     });
   }
 });

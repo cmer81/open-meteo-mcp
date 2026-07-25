@@ -186,3 +186,94 @@ describe('DELETE /mcp', () => {
     expect(sessionServers.has(sessionId)).toBe(false);
   });
 });
+
+describe('Full protocol round trip via McpServer#registerTool', () => {
+  let app: express.Application;
+  let mcpServer: OpenMeteoMCPServer;
+
+  beforeEach(() => {
+    process.env.NODE_ENV = 'test';
+    mcpServer = new OpenMeteoMCPServer();
+    app = (mcpServer as unknown as { buildExpressApp(): express.Application }).buildExpressApp();
+  });
+
+  it('lists all 17 tools with read-only annotations and successfully calls weather_forecast', async () => {
+    const client = (mcpServer as unknown as { client: OpenMeteoClient }).client;
+    const fakeResponse = {
+      latitude: 48.85,
+      longitude: 2.35,
+      elevation: 35,
+      generationtime_ms: 0.1,
+      utc_offset_seconds: 0,
+      hourly: { time: ['2026-01-01T00:00'], temperature_2m: [5] },
+    };
+    vi.spyOn(client, 'getForecast').mockResolvedValue(fakeResponse);
+
+    // A real MCP client always sends both media types the streamable HTTP
+    // transport supports; supertest defaults to none, so this must be explicit.
+    const acceptBoth = 'application/json, text/event-stream';
+
+    const initRes = await supertest(app)
+      .post('/mcp')
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'test-client', version: '1.0.0' },
+        },
+      });
+
+    expect(initRes.status).toBe(200);
+    const sessionId = initRes.headers['mcp-session-id'];
+    expect(sessionId).toBeDefined();
+
+    const listRes = await supertest(app)
+      .post('/mcp')
+      .set('mcp-session-id', sessionId)
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
+
+    expect(listRes.status).toBe(200);
+    const tools = listRes.body.result.tools as Array<{
+      name: string;
+      annotations?: { readOnlyHint?: boolean };
+      inputSchema: { properties: Record<string, unknown> };
+    }>;
+    expect(tools).toHaveLength(17);
+    const forecastTool = tools.find((t) => t.name === 'weather_forecast');
+    expect(forecastTool?.annotations?.readOnlyHint).toBe(true);
+    expect(forecastTool?.inputSchema.properties.latitude).toBeDefined();
+
+    const callRes = await supertest(app)
+      .post('/mcp')
+      .set('mcp-session-id', sessionId)
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send({
+        jsonrpc: '2.0',
+        id: 3,
+        method: 'tools/call',
+        params: { name: 'weather_forecast', arguments: { latitude: 48.85, longitude: 2.35 } },
+      });
+
+    expect(callRes.status).toBe(200);
+    const content = callRes.body.result.content[0].text;
+    expect(JSON.parse(content).hourly.temperature_2m).toEqual([5]);
+    // Confirms the SDK validates via our Zod schema (applying its .default()s)
+    // before invoking the handler, not just passing raw arguments through.
+    expect(client.getForecast).toHaveBeenCalledWith({
+      latitude: 48.85,
+      longitude: 2.35,
+      temperature_unit: 'celsius',
+      wind_speed_unit: 'kmh',
+      precipitation_unit: 'mm',
+      timeformat: 'iso8601',
+    });
+  });
+});

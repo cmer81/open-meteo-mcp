@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { ENSEMBLE_FORECAST_TOOL, WEATHER_FORECAST_TOOL } from './tools.js';
 import {
   ArchiveParamsSchema,
   ClimateParamsSchema,
@@ -16,14 +15,6 @@ describe('Fix 1: past_days cap', () => {
       past_days: 92,
     });
     expect(result.success).toBe(true);
-  });
-
-  it('tools.ts should not have enum [1, 2] for past_days', () => {
-    const props = WEATHER_FORECAST_TOOL.inputSchema.properties as Record<string, unknown>;
-    const pastDays = props.past_days as Record<string, unknown>;
-    expect(pastDays.enum).toBeUndefined();
-    expect(pastDays.minimum).toBe(1);
-    expect(pastDays.maximum).toBe(92);
   });
 
   // These tests pass both before and after the fix (boundary behavior unchanged)
@@ -139,14 +130,6 @@ describe('Fix 3: EnsembleModelsSchema accepts a single model or an array of mode
     });
     expect(result.success).toBe(true);
   });
-
-  it('tools.ts ENSEMBLE_FORECAST_TOOL models should accept string or array', () => {
-    const props = ENSEMBLE_FORECAST_TOOL.inputSchema.properties as Record<string, unknown>;
-    const models = props.models as Record<string, { type?: string; enum?: unknown }[]>;
-    expect(Array.isArray(models.oneOf)).toBe(true);
-    expect(models.oneOf.some((variant) => variant.type === 'string')).toBe(true);
-    expect(models.oneOf.some((variant) => variant.type === 'array')).toBe(true);
-  });
 });
 
 describe('Fix 5: EnsembleModelsSchema correct API model names', () => {
@@ -221,15 +204,5 @@ describe('Fix 4: current array parameter in weather_forecast', () => {
       current_weather: true,
     });
     expect(result.success).toBe(true);
-  });
-
-  it('WEATHER_FORECAST_TOOL should have a current property of type array', () => {
-    const props = WEATHER_FORECAST_TOOL.inputSchema.properties as Record<string, unknown>;
-    const current = props.current as Record<string, unknown>;
-    expect(current).toBeDefined();
-    expect(current.type).toBe('array');
-    const items = current.items as Record<string, unknown>;
-    expect(items.enum).toContain('temperature_2m');
-    expect(items.enum).toContain('wind_speed_10m');
   });
 });

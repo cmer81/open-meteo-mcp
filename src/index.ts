@@ -3,12 +3,12 @@ import 'dotenv/config';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
-import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import express from 'express';
+import type { z } from 'zod';
 import { OpenMeteoClient } from './client.js';
 import {
   createAuthMiddleware,
@@ -17,25 +17,61 @@ import {
   getClientIp,
   sanitizeErrorMessage,
 } from './security.js';
-import { ALL_TOOLS } from './tools.js';
+import {
+  AIR_QUALITY_TOOL,
+  CLIMATE_PROJECTION_TOOL,
+  DWD_ICON_FORECAST_TOOL,
+  ECMWF_FORECAST_TOOL,
+  ELEVATION_TOOL,
+  ENSEMBLE_FORECAST_TOOL,
+  FLOOD_FORECAST_TOOL,
+  GEM_FORECAST_TOOL,
+  GEOCODING_TOOL,
+  GFS_FORECAST_TOOL,
+  JMA_FORECAST_TOOL,
+  MARINE_WEATHER_TOOL,
+  METEOFRANCE_FORECAST_TOOL,
+  METNO_FORECAST_TOOL,
+  SEASONAL_FORECAST_TOOL,
+  type ToolDefinition,
+  WEATHER_ARCHIVE_TOOL,
+  WEATHER_FORECAST_TOOL,
+} from './tools.js';
 import { truncateResponse } from './truncation.js';
 import {
+  type AirQualityParams,
   AirQualityParamsSchema,
+  type ArchiveParams,
   ArchiveParamsSchema,
+  type ClimateParams,
   ClimateParamsSchema,
+  type DwdIconParams,
   DwdIconParamsSchema,
+  type EcmwfParams,
   EcmwfParamsSchema,
+  type ElevationParams,
   ElevationParamsSchema,
+  type EnsembleParams,
   EnsembleParamsSchema,
+  type FloodParams,
   FloodParamsSchema,
+  type ForecastParams,
   ForecastParamsSchema,
+  type GemParams,
   GemParamsSchema,
+  type GeocodingParams,
   GeocodingParamsSchema,
+  type GfsParams,
   GfsParamsSchema,
+  type JmaParams,
   JmaParamsSchema,
+  type MarineParams,
   MarineParamsSchema,
+  type MeteoFranceParams,
   MeteoFranceParamsSchema,
+  type MetnoParams,
   MetnoParamsSchema,
+  type SeasonalParams,
   SeasonalParamsSchema,
 } from './types.js';
 
@@ -58,7 +94,7 @@ export class OpenMeteoMCPServer {
   private client: OpenMeteoClient;
   private sessionServers: Map<
     string,
-    { server: Server; transport: StreamableHTTPServerTransport; lastActivity: number }
+    { server: McpServer; transport: StreamableHTTPServerTransport; lastActivity: number }
   > = new Map();
 
   private static readonly SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour idle timeout
@@ -70,8 +106,63 @@ export class OpenMeteoMCPServer {
     this.client = new OpenMeteoClient(baseURL, pkg.version);
   }
 
-  private createServer(): Server {
-    const server = new Server(
+  // Registers a read-only tool: wires the Zod schema (validation + generated
+  // JSON schema), and wraps the handler with logging, response truncation,
+  // and MCP-style error results shared across all 17 tools.
+  //
+  // registerTool's own generic overloads recurse too deep for TypeScript once
+  // a params schema uses .refine()/.superRefine() (e.g. ArchiveParamsSchema's
+  // date-range check) combined with this project's `strict`+`noUncheckedIndexedAccess`
+  // tsconfig, so the call below goes through an untyped signature; each call
+  // site's `handler` still gets a precise, explicitly-annotated params type.
+  private registerReadOnlyTool(
+    server: McpServer,
+    meta: ToolDefinition,
+    schema: z.ZodTypeAny,
+    handler: (params: never) => Promise<unknown>,
+  ): void {
+    const registerToolUntyped = server.registerTool.bind(server) as (
+      name: string,
+      config: unknown,
+      cb: unknown,
+    ) => void;
+
+    registerToolUntyped(
+      meta.name,
+      {
+        title: meta.title,
+        description: meta.description,
+        inputSchema: schema,
+        annotations: meta.annotations,
+      },
+      async (params: never) => {
+        const start = Date.now();
+        log('info', 'tool_call', { tool: meta.name, args: params });
+
+        try {
+          const result = await handler(params);
+          const responseText = JSON.stringify(truncateResponse(result), null, 2);
+          log('info', 'tool_success', {
+            tool: meta.name,
+            response_size: responseText.length,
+            duration_ms: Date.now() - start,
+          });
+          return { content: [{ type: 'text' as const, text: responseText }] };
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          log('error', 'tool_error', {
+            tool: meta.name,
+            error: message,
+            duration_ms: Date.now() - start,
+          });
+          return { content: [{ type: 'text' as const, text: `Error: ${message}` }], isError: true };
+        }
+      },
+    );
+  }
+
+  private createServer(): McpServer {
+    const server = new McpServer(
       {
         name: 'open-meteo-mcp-server',
         version: pkg.version,
@@ -83,130 +174,106 @@ export class OpenMeteoMCPServer {
       },
     );
 
-    // Setup handlers for this server instance
-    server.setRequestHandler(ListToolsRequestSchema, async () => ({
-      tools: ALL_TOOLS,
-    }));
-
-    server.setRequestHandler(CallToolRequestSchema, async (request) => {
-      const { name, arguments: args } = request.params;
-      const start = Date.now();
-
-      log('info', 'tool_call', { tool: name, args });
-
-      try {
-        let result: unknown;
-        switch (name) {
-          case 'weather_forecast': {
-            const params = ForecastParamsSchema.parse(args);
-            result = await this.client.getForecast(params);
-            break;
-          }
-          case 'weather_archive': {
-            const params = ArchiveParamsSchema.parse(args);
-            result = await this.client.getArchive(params);
-            break;
-          }
-          case 'air_quality': {
-            const params = AirQualityParamsSchema.parse(args);
-            result = await this.client.getAirQuality(params);
-            break;
-          }
-          case 'marine_weather': {
-            const params = MarineParamsSchema.parse(args);
-            result = await this.client.getMarine(params);
-            break;
-          }
-          case 'elevation': {
-            const params = ElevationParamsSchema.parse(args);
-            result = await this.client.getElevation(params);
-            break;
-          }
-          case 'flood_forecast': {
-            const params = FloodParamsSchema.parse(args);
-            result = await this.client.getFlood(params);
-            break;
-          }
-          case 'geocoding': {
-            const params = GeocodingParamsSchema.parse(args);
-            result = await this.client.getGeocoding(params);
-            break;
-          }
-          case 'dwd_icon_forecast': {
-            const params = DwdIconParamsSchema.parse(args);
-            result = await this.client.getDwdIcon(params);
-            break;
-          }
-          case 'gfs_forecast': {
-            const params = GfsParamsSchema.parse(args);
-            result = await this.client.getGfs(params);
-            break;
-          }
-          case 'meteofrance_forecast': {
-            const params = MeteoFranceParamsSchema.parse(args);
-            result = await this.client.getMeteoFrance(params);
-            break;
-          }
-          case 'ecmwf_forecast': {
-            const params = EcmwfParamsSchema.parse(args);
-            result = await this.client.getEcmwf(params);
-            break;
-          }
-          case 'jma_forecast': {
-            const params = JmaParamsSchema.parse(args);
-            result = await this.client.getJma(params);
-            break;
-          }
-          case 'metno_forecast': {
-            const params = MetnoParamsSchema.parse(args);
-            result = await this.client.getMetno(params);
-            break;
-          }
-          case 'gem_forecast': {
-            const params = GemParamsSchema.parse(args);
-            result = await this.client.getGem(params);
-            break;
-          }
-          case 'seasonal_forecast': {
-            const params = SeasonalParamsSchema.parse(args);
-            result = await this.client.getSeasonal(params);
-            break;
-          }
-          case 'climate_projection': {
-            const params = ClimateParamsSchema.parse(args);
-            result = await this.client.getClimate(params);
-            break;
-          }
-          case 'ensemble_forecast': {
-            const params = EnsembleParamsSchema.parse(args);
-            result = await this.client.getEnsemble(params);
-            break;
-          }
-          default:
-            throw new Error(`Unknown tool: ${name}`);
-        }
-
-        const responseText = JSON.stringify(truncateResponse(result), null, 2);
-        log('info', 'tool_success', {
-          tool: name,
-          response_size: responseText.length,
-          duration_ms: Date.now() - start,
-        });
-
-        return { content: [{ type: 'text', text: responseText }] };
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        log('error', 'tool_error', { tool: name, error: message, duration_ms: Date.now() - start });
-        return { content: [{ type: 'text', text: `Error: ${message}` }], isError: true };
-      }
-    });
+    this.registerReadOnlyTool(
+      server,
+      WEATHER_FORECAST_TOOL,
+      ForecastParamsSchema,
+      (params: ForecastParams) => this.client.getForecast(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      WEATHER_ARCHIVE_TOOL,
+      ArchiveParamsSchema,
+      (params: ArchiveParams) => this.client.getArchive(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      AIR_QUALITY_TOOL,
+      AirQualityParamsSchema,
+      (params: AirQualityParams) => this.client.getAirQuality(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      MARINE_WEATHER_TOOL,
+      MarineParamsSchema,
+      (params: MarineParams) => this.client.getMarine(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      ELEVATION_TOOL,
+      ElevationParamsSchema,
+      (params: ElevationParams) => this.client.getElevation(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      FLOOD_FORECAST_TOOL,
+      FloodParamsSchema,
+      (params: FloodParams) => this.client.getFlood(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      GEOCODING_TOOL,
+      GeocodingParamsSchema,
+      (params: GeocodingParams) => this.client.getGeocoding(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      DWD_ICON_FORECAST_TOOL,
+      DwdIconParamsSchema,
+      (params: DwdIconParams) => this.client.getDwdIcon(params),
+    );
+    this.registerReadOnlyTool(server, GFS_FORECAST_TOOL, GfsParamsSchema, (params: GfsParams) =>
+      this.client.getGfs(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      METEOFRANCE_FORECAST_TOOL,
+      MeteoFranceParamsSchema,
+      (params: MeteoFranceParams) => this.client.getMeteoFrance(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      ECMWF_FORECAST_TOOL,
+      EcmwfParamsSchema,
+      (params: EcmwfParams) => this.client.getEcmwf(params),
+    );
+    this.registerReadOnlyTool(server, JMA_FORECAST_TOOL, JmaParamsSchema, (params: JmaParams) =>
+      this.client.getJma(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      METNO_FORECAST_TOOL,
+      MetnoParamsSchema,
+      (params: MetnoParams) => this.client.getMetno(params),
+    );
+    this.registerReadOnlyTool(server, GEM_FORECAST_TOOL, GemParamsSchema, (params: GemParams) =>
+      this.client.getGem(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      SEASONAL_FORECAST_TOOL,
+      SeasonalParamsSchema,
+      (params: SeasonalParams) => this.client.getSeasonal(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      CLIMATE_PROJECTION_TOOL,
+      ClimateParamsSchema,
+      (params: ClimateParams) => this.client.getClimate(params),
+    );
+    this.registerReadOnlyTool(
+      server,
+      ENSEMBLE_FORECAST_TOOL,
+      EnsembleParamsSchema,
+      (params: EnsembleParams) => this.client.getEnsemble(params),
+    );
 
     return server;
   }
 
   private getSession(
     sessionId: string,
-  ): { server: Server; transport: StreamableHTTPServerTransport } | undefined {
+  ): { server: McpServer; transport: StreamableHTTPServerTransport } | undefined {
     const session = this.sessionServers.get(sessionId);
     if (session) {
       session.lastActivity = Date.now();
@@ -411,24 +478,28 @@ export class OpenMeteoMCPServer {
           log('info', 'session_created', { session_id: newSessionId.substring(0, 8) });
 
           // Create server and transport for this new session
-          const server = this.createServer();
+          const mcpServer = this.createServer();
           const transport = new StreamableHTTPServerTransport({
             enableJsonResponse: true,
             sessionIdGenerator: () => newSessionId,
           });
 
-          server.oninitialized = () => {
+          mcpServer.server.oninitialized = () => {
             log('info', 'session_initialized', { session_id: newSessionId.substring(0, 8) });
           };
 
-          server.onclose = () => {
+          mcpServer.server.onclose = () => {
             this.sessionServers.delete(newSessionId);
             log('info', 'session_closed', { session_id: newSessionId.substring(0, 8) });
           };
 
-          await server.connect(transport as Transport);
+          await mcpServer.connect(transport as Transport);
 
-          this.sessionServers.set(newSessionId, { server, transport, lastActivity: Date.now() });
+          this.sessionServers.set(newSessionId, {
+            server: mcpServer,
+            transport,
+            lastActivity: Date.now(),
+          });
 
           // Set session ID in response header before handling request
           res.setHeader('mcp-session-id', newSessionId);
@@ -508,12 +579,12 @@ export class OpenMeteoMCPServer {
       this.startHttpTransport();
     } else {
       // For stdio mode, create a single server instance
-      const server = this.createServer();
+      const mcpServer = this.createServer();
       const stdioTransport = new StdioServerTransport();
-      server.oninitialized = () => {
+      mcpServer.server.oninitialized = () => {
         log('info', 'session_initialized', { transport: 'stdio' });
       };
-      await server.connect(stdioTransport as Transport);
+      await mcpServer.connect(stdioTransport as Transport);
       log('info', 'server_start', { transport: 'stdio' });
     }
   }

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { WEATHER_ARCHIVE_TOOL } from './tools.js';
 import {
   ArchiveDailyVariablesSchema,
   ArchiveHourlyVariablesSchema,
@@ -55,6 +54,10 @@ describe('ArchiveHourlyVariablesSchema', () => {
     expect(() => ArchiveHourlyVariablesSchema.parse(['soil_moisture_3_to_9cm'])).toThrow();
     expect(() => ArchiveHourlyVariablesSchema.parse(['soil_moisture_9_to_27cm'])).toThrow();
     expect(() => ArchiveHourlyVariablesSchema.parse(['soil_moisture_27_to_81cm'])).toThrow();
+  });
+
+  it('should reject surface_temperature — verified to return null data on the live archive API', () => {
+    expect(() => ArchiveHourlyVariablesSchema.parse(['surface_temperature'])).toThrow();
   });
 });
 
@@ -133,47 +136,5 @@ describe('ArchiveParamsSchema uses archive-specific schemas', () => {
     };
 
     expect(() => ArchiveParamsSchema.parse(params)).toThrow();
-  });
-});
-
-describe('WEATHER_ARCHIVE_TOOL schema alignment', () => {
-  const toolInputSchema = WEATHER_ARCHIVE_TOOL.inputSchema;
-  const hourlyEnum: string[] =
-    (toolInputSchema.properties as Record<string, { items?: { enum?: string[] } }>).hourly?.items
-      ?.enum ?? [];
-  const dailyEnum: string[] =
-    (toolInputSchema.properties as Record<string, { items?: { enum?: string[] } }>).daily?.items
-      ?.enum ?? [];
-
-  it('should include ERA5-specific hourly variables in tool schema', () => {
-    expect(hourlyEnum).toContain('soil_moisture_0_to_7cm');
-    expect(hourlyEnum).toContain('soil_moisture_7_to_28cm');
-    expect(hourlyEnum).toContain('soil_moisture_28_to_100cm');
-    expect(hourlyEnum).toContain('soil_moisture_100_to_255cm');
-    expect(hourlyEnum).toContain('soil_temperature_0_to_7cm');
-    expect(hourlyEnum).toContain('wind_speed_100m');
-    expect(hourlyEnum).toContain('wind_direction_100m');
-  });
-
-  it('should not include surface_temperature — verified to return null data on the live archive API', () => {
-    expect(hourlyEnum).not.toContain('surface_temperature');
-  });
-
-  it('should not include forecast-only variables in tool hourly schema', () => {
-    expect(hourlyEnum).not.toContain('precipitation_probability');
-    expect(hourlyEnum).not.toContain('boundary_layer_height_pbl');
-    expect(hourlyEnum).not.toContain('soil_moisture_0_to_1cm');
-    expect(hourlyEnum).not.toContain('soil_moisture_1_to_3cm');
-  });
-
-  it('should include ERA5 daily variables in tool schema', () => {
-    expect(dailyEnum).toContain('temperature_2m_mean');
-    expect(dailyEnum).toContain('apparent_temperature_mean');
-    expect(dailyEnum).toContain('precipitation_sum');
-  });
-
-  it('should not include forecast-only daily variables in tool schema', () => {
-    expect(dailyEnum).not.toContain('precipitation_probability_max');
-    expect(dailyEnum).not.toContain('showers_sum');
   });
 });
