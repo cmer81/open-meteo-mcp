@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CHARACTER_LIMIT, truncateResponse } from './truncation.js';
+import { CHARACTER_LIMIT, serializeToolResponse, truncateResponse } from './truncation.js';
 
 function makeHourlySeries(length: number) {
   return {
@@ -67,5 +67,27 @@ describe('truncateResponse', () => {
     expect(result.truncated).toBe(true);
     expect(result.results.length).toBeGreaterThan(0);
     expect(result.results.length).toBeLessThan(5000);
+  });
+});
+
+describe('serializeToolResponse', () => {
+  it('keeps the emitted text within the character limit, indentation included', () => {
+    const large = { latitude: 48.85, longitude: 2.35, hourly: makeHourlySeries(20_000) };
+
+    const text = serializeToolResponse(large);
+
+    // The budget applies to what is actually sent to the client, so the
+    // measurement has to account for the pretty-printing whitespace.
+    expect(text.length).toBeLessThanOrEqual(CHARACTER_LIMIT);
+    expect(JSON.parse(text).truncated).toBe(true);
+  });
+
+  it('pretty-prints responses that fit without marking them truncated', () => {
+    const small = { latitude: 48.85, longitude: 2.35, hourly: makeHourlySeries(5) };
+
+    const text = serializeToolResponse(small);
+
+    expect(text).toBe(JSON.stringify(small, null, 2));
+    expect(JSON.parse(text).truncated).toBeUndefined();
   });
 });

@@ -8,7 +8,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import express from 'express';
-import type { z } from 'zod';
+import { z } from 'zod';
 import { OpenMeteoClient } from './client.js';
 import {
   createAuthMiddleware,
@@ -37,7 +37,7 @@ import {
   WEATHER_ARCHIVE_TOOL,
   WEATHER_FORECAST_TOOL,
 } from './tools.js';
-import { truncateResponse } from './truncation.js';
+import { serializeToolResponse } from './truncation.js';
 import {
   type AirQualityParams,
   AirQualityParamsSchema,
@@ -110,11 +110,12 @@ export class OpenMeteoMCPServer {
   // JSON schema), and wraps the handler with logging, response truncation,
   // and MCP-style error results shared across all 17 tools.
   //
-  // registerTool's own generic overloads recurse too deep for TypeScript once
-  // a params schema uses .refine()/.superRefine() (e.g. ArchiveParamsSchema's
-  // date-range check) combined with this project's `strict`+`noUncheckedIndexedAccess`
-  // tsconfig, so the call below goes through an untyped signature; each call
-  // site's `handler` still gets a precise, explicitly-annotated params type.
+  // The schemas arrive here as a common `z.ZodTypeAny` rather than the concrete
+  // per-tool types registerTool's generic overloads expect, so the call below
+  // goes through an untyped signature; each call site's `handler` still gets a
+  // precise, explicitly-annotated params type. Note this cast also silences the
+  // SDK's compile-time check on `inputSchema` — see the ZodEffects handling
+  // below for what that check would otherwise have caught.
   private registerReadOnlyTool(
     server: McpServer,
     meta: ToolDefinition,
@@ -127,21 +128,39 @@ export class OpenMeteoMCPServer {
       cb: unknown,
     ) => void;
 
+    // `.refine()` wraps the object in a ZodEffects, which the SDK cannot
+    // introspect: it would publish an empty `{}` input schema while still
+    // validating strictly, leaving clients with no idea what to send. Publish
+    // the underlying object and re-apply the effects below.
+    const objectSchema = schema instanceof z.ZodEffects ? schema.innerType() : schema;
+
     registerToolUntyped(
       meta.name,
       {
         title: meta.title,
         description: meta.description,
-        inputSchema: schema,
+        inputSchema: objectSchema,
         annotations: meta.annotations,
       },
       async (params: never) => {
         const start = Date.now();
         log('info', 'tool_call', { tool: meta.name, args: params });
 
+        // Cross-field rules (e.g. start_date <= end_date) live in the effects
+        // the SDK never sees, so they are enforced here.
+        const refined = schema.safeParse(params);
+        if (!refined.success) {
+          const message = refined.error.issues.map((issue) => issue.message).join('; ');
+          log('error', 'tool_error', { tool: meta.name, error: message, duration_ms: 0 });
+          return {
+            content: [{ type: 'text' as const, text: `Error: ${message}` }],
+            isError: true,
+          };
+        }
+
         try {
-          const result = await handler(params);
-          const responseText = JSON.stringify(truncateResponse(result), null, 2);
+          const result = await handler(refined.data as never);
+          const responseText = serializeToolResponse(result);
           log('info', 'tool_success', {
             tool: meta.name,
             response_size: responseText.length,

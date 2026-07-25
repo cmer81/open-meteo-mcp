@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { OpenMeteoClient } from './client.js';
 import { OpenMeteoMCPServer } from './index.js';
 import { ALL_TOOLS } from './tools.js';
+import { CHARACTER_LIMIT } from './truncation.js';
 import {
   AirQualityParamsSchema,
   ArchiveParamsSchema,
@@ -275,5 +276,116 @@ describe('Full protocol round trip via McpServer#registerTool', () => {
       precipitation_unit: 'mm',
       timeformat: 'iso8601',
     });
+  });
+
+  // Tools whose params schema carries a .refine() used to reach the SDK as a
+  // ZodEffects, which it cannot introspect: it published an empty `{}` schema
+  // while still validating strictly, leaving clients unable to know what to send.
+  it('publishes a complete input schema for every tool', async () => {
+    const acceptBoth = 'application/json, text/event-stream';
+    const initRes = await supertest(app)
+      .post('/mcp')
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'test-client', version: '1.0.0' },
+        },
+      });
+    const sessionId = initRes.headers['mcp-session-id'];
+
+    const listRes = await supertest(app)
+      .post('/mcp')
+      .set('mcp-session-id', sessionId)
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
+
+    const tools = listRes.body.result.tools as Array<{
+      name: string;
+      inputSchema: {
+        properties?: Record<string, unknown>;
+        required?: string[];
+        additionalProperties?: boolean;
+      };
+    }>;
+
+    for (const tool of tools) {
+      expect(
+        Object.keys(tool.inputSchema.properties ?? {}).length,
+        `${tool.name} exposes no properties`,
+      ).toBeGreaterThan(0);
+      expect(
+        tool.inputSchema.required ?? [],
+        `${tool.name} exposes no required fields`,
+      ).not.toEqual([]);
+      expect(
+        tool.inputSchema.additionalProperties,
+        `${tool.name} does not reject unknown keys`,
+      ).toBe(false);
+    }
+
+    const archive = tools.find((t) => t.name === 'weather_archive');
+    expect(archive?.inputSchema.required).toEqual(
+      expect.arrayContaining(['latitude', 'longitude', 'start_date', 'end_date']),
+    );
+    const climate = tools.find((t) => t.name === 'climate_projection');
+    expect(climate?.inputSchema.required).toEqual(
+      expect.arrayContaining(['latitude', 'longitude', 'start_date', 'end_date']),
+    );
+  });
+
+  it('keeps an oversized tool response within the character limit', async () => {
+    const client = (mcpServer as unknown as { client: OpenMeteoClient }).client;
+    const length = 20_000;
+    vi.spyOn(client, 'getForecast').mockResolvedValue({
+      latitude: 48.85,
+      longitude: 2.35,
+      elevation: 35,
+      generationtime_ms: 0.1,
+      utc_offset_seconds: 0,
+      hourly: {
+        time: Array.from({ length }, (_, i) => `2026-01-01T${i}:00`),
+        temperature_2m: Array.from({ length }, (_, i) => i / 10),
+      },
+    });
+
+    const acceptBoth = 'application/json, text/event-stream';
+    const initRes = await supertest(app)
+      .post('/mcp')
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'test-client', version: '1.0.0' },
+        },
+      });
+    const sessionId = initRes.headers['mcp-session-id'];
+
+    const callRes = await supertest(app)
+      .post('/mcp')
+      .set('mcp-session-id', sessionId)
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: { name: 'weather_forecast', arguments: { latitude: 48.85, longitude: 2.35 } },
+      });
+
+    const text = callRes.body.result.content[0].text as string;
+    expect(text.length).toBeLessThanOrEqual(CHARACTER_LIMIT);
+    expect(JSON.parse(text).truncated).toBe(true);
   });
 });
