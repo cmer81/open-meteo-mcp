@@ -43,6 +43,90 @@ export function createAuthMiddleware() {
 }
 
 /**
+ * Express middleware guarding against DNS rebinding attacks: without it, a page
+ * served from any website can drive a locally bound MCP server through the
+ * victim's browser.
+ *
+ * Requests carrying no `Origin` header — CLI clients, SDK transports, container
+ * probes — pass through untouched. A request that does carry one is browser-issued
+ * and must match the ALLOWED_ORIGINS allow-list (comma-separated), which is empty
+ * by default: no browser is expected to talk to this server unless configured.
+ */
+export function createOriginValidator() {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const origin = req.headers.origin;
+    if (!origin) {
+      next();
+      return;
+    }
+
+    const allowed = (process.env.ALLOWED_ORIGINS ?? '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    if (allowed.includes(origin)) {
+      next();
+      return;
+    }
+
+    res.status(403).json({
+      jsonrpc: '2.0',
+      error: { code: -32600, message: 'Forbidden: origin not allowed' },
+      id: null,
+    });
+  };
+}
+
+/**
+ * The MCP spec requires clients to accept both application/json and
+ * text/event-stream; clients sending `*\/*` or a single type are otherwise
+ * rejected with a 406. This widens the header on their behalf.
+ *
+ * Crucially it rewrites `rawHeaders` and not just `req.headers`: the SDK hands
+ * the request to Hono's `getRequestListener`, which rebuilds the web-standard
+ * Request from Node's raw header array, so mutating the parsed object alone is
+ * invisible to the transport.
+ */
+export function createAcceptNormalizer() {
+  const required = ['application/json', 'text/event-stream'];
+
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const tokens = (req.headers.accept ?? '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const present = new Set(tokens.map((value) => value.toLowerCase()));
+
+    for (const value of required) {
+      if (!present.has(value)) {
+        tokens.push(value);
+        present.add(value);
+      }
+    }
+
+    const merged = tokens.join(', ');
+    req.headers.accept = merged;
+
+    // Rebuild rawHeaders with exactly one Accept entry carrying the merged value.
+    const raw = req.rawHeaders;
+    const rebuilt: string[] = [];
+    for (let i = 0; i < raw.length; i += 2) {
+      const key = raw[i];
+      const value = raw[i + 1];
+      if (key === undefined || value === undefined) continue;
+      if (key.toLowerCase() === 'accept') continue;
+      rebuilt.push(key, value);
+    }
+    rebuilt.push('Accept', merged);
+    raw.length = 0;
+    raw.push(...rebuilt);
+
+    next();
+  };
+}
+
+/**
  * Returns a safe, generic error message for HTTP responses.
  * Never expose internal error details (stack traces, connection strings,
  * internal hostnames) to clients.

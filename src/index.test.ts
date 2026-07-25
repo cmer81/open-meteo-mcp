@@ -1,9 +1,10 @@
 import type express from 'express';
 import supertest from 'supertest';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OpenMeteoClient } from './client.js';
 import { OpenMeteoMCPServer } from './index.js';
 import { ALL_TOOLS } from './tools.js';
+import { CHARACTER_LIMIT } from './truncation.js';
 import {
   AirQualityParamsSchema,
   ArchiveParamsSchema,
@@ -274,6 +275,242 @@ describe('Full protocol round trip via McpServer#registerTool', () => {
       wind_speed_unit: 'kmh',
       precipitation_unit: 'mm',
       timeformat: 'iso8601',
+    });
+  });
+
+  // Tools whose params schema carries a .refine() used to reach the SDK as a
+  // ZodEffects, which it cannot introspect: it published an empty `{}` schema
+  // while still validating strictly, leaving clients unable to know what to send.
+  it('publishes a complete input schema for every tool', async () => {
+    const acceptBoth = 'application/json, text/event-stream';
+    const initRes = await supertest(app)
+      .post('/mcp')
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'test-client', version: '1.0.0' },
+        },
+      });
+    const sessionId = initRes.headers['mcp-session-id'];
+
+    const listRes = await supertest(app)
+      .post('/mcp')
+      .set('mcp-session-id', sessionId)
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
+
+    const tools = listRes.body.result.tools as Array<{
+      name: string;
+      inputSchema: {
+        properties?: Record<string, unknown>;
+        required?: string[];
+        additionalProperties?: boolean;
+      };
+    }>;
+
+    for (const tool of tools) {
+      expect(
+        Object.keys(tool.inputSchema.properties ?? {}).length,
+        `${tool.name} exposes no properties`,
+      ).toBeGreaterThan(0);
+      expect(
+        tool.inputSchema.required ?? [],
+        `${tool.name} exposes no required fields`,
+      ).not.toEqual([]);
+      expect(
+        tool.inputSchema.additionalProperties,
+        `${tool.name} does not reject unknown keys`,
+      ).toBe(false);
+    }
+
+    const archive = tools.find((t) => t.name === 'weather_archive');
+    expect(archive?.inputSchema.required).toEqual(
+      expect.arrayContaining(['latitude', 'longitude', 'start_date', 'end_date']),
+    );
+    const climate = tools.find((t) => t.name === 'climate_projection');
+    expect(climate?.inputSchema.required).toEqual(
+      expect.arrayContaining(['latitude', 'longitude', 'start_date', 'end_date']),
+    );
+  });
+
+  it('keeps an oversized tool response within the character limit', async () => {
+    const client = (mcpServer as unknown as { client: OpenMeteoClient }).client;
+    const length = 20_000;
+    vi.spyOn(client, 'getForecast').mockResolvedValue({
+      latitude: 48.85,
+      longitude: 2.35,
+      elevation: 35,
+      generationtime_ms: 0.1,
+      utc_offset_seconds: 0,
+      hourly: {
+        time: Array.from({ length }, (_, i) => `2026-01-01T${i}:00`),
+        temperature_2m: Array.from({ length }, (_, i) => i / 10),
+      },
+    });
+
+    const acceptBoth = 'application/json, text/event-stream';
+    const initRes = await supertest(app)
+      .post('/mcp')
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'test-client', version: '1.0.0' },
+        },
+      });
+    const sessionId = initRes.headers['mcp-session-id'];
+
+    const callRes = await supertest(app)
+      .post('/mcp')
+      .set('mcp-session-id', sessionId)
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send({
+        jsonrpc: '2.0',
+        id: 2,
+        method: 'tools/call',
+        params: { name: 'weather_forecast', arguments: { latitude: 48.85, longitude: 2.35 } },
+      });
+
+    const text = callRes.body.result.content[0].text as string;
+    expect(text.length).toBeLessThanOrEqual(CHARACTER_LIMIT);
+    expect(JSON.parse(text).truncated).toBe(true);
+  });
+});
+
+describe('HTTP transport security', () => {
+  let app: express.Application;
+  const acceptBoth = 'application/json, text/event-stream';
+  const initBody = {
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'initialize',
+    params: {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'test-client', version: '1.0.0' },
+    },
+  };
+
+  beforeEach(() => {
+    process.env.NODE_ENV = 'test';
+    app = (
+      new OpenMeteoMCPServer() as unknown as { buildExpressApp(): express.Application }
+    ).buildExpressApp();
+  });
+
+  afterEach(() => {
+    delete process.env.API_KEY;
+    delete process.env.ALLOWED_ORIGINS;
+  });
+
+  // The auth and rate-limit middlewares used to be registered after the GET and
+  // DELETE routes, so Express never ran them for those two verbs: an unauthenticated
+  // caller holding a session id could terminate someone else's session.
+  describe('API key enforcement', () => {
+    beforeEach(() => {
+      process.env.API_KEY = 'test-secret';
+    });
+
+    it('rejects GET /mcp when no API key is supplied', async () => {
+      const res = await supertest(app).get('/mcp').set('mcp-session-id', 'some-session-id');
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects DELETE /mcp when no API key is supplied', async () => {
+      const res = await supertest(app).delete('/mcp').set('mcp-session-id', 'some-session-id');
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects POST /mcp when no API key is supplied', async () => {
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', acceptBoth)
+        .send(initBody);
+      expect(res.status).toBe(401);
+    });
+
+    it('lets an authenticated caller through to the route handler', async () => {
+      const res = await supertest(app)
+        .delete('/mcp')
+        .set('X-API-Key', 'test-secret')
+        .set('mcp-session-id', 'unknown-session');
+      // 404 = auth passed, the session simply does not exist
+      expect(res.status).toBe(404);
+    });
+
+    it('leaves /health reachable without a key for container probes', async () => {
+      const res = await supertest(app).get('/health');
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // DNS rebinding protection: a browser page on any origin could otherwise drive
+  // a locally bound MCP server.
+  describe('Origin validation', () => {
+    it('rejects a browser Origin when none are allow-listed', async () => {
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', acceptBoth)
+        .set('Origin', 'http://evil.example')
+        .send(initBody);
+      expect(res.status).toBe(403);
+    });
+
+    it('accepts an Origin present in ALLOWED_ORIGINS', async () => {
+      process.env.ALLOWED_ORIGINS = 'http://localhost:5173,https://app.example';
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', acceptBoth)
+        .set('Origin', 'https://app.example')
+        .send(initBody);
+      expect(res.status).toBe(200);
+    });
+
+    it('accepts requests with no Origin header (non-browser clients)', async () => {
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', acceptBoth)
+        .send(initBody);
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // The Accept normalizer mutates req.headers, but the SDK reads the raw Node
+  // headers through Hono, so clients sending */* used to get a 406.
+  describe('Accept header normalization', () => {
+    it('accepts a client sending Accept: */*', async () => {
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', '*/*')
+        .send(initBody);
+      expect(res.status).toBe(200);
+    });
+
+    it('accepts a client sending only application/json', async () => {
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', 'application/json')
+        .send(initBody);
+      expect(res.status).toBe(200);
     });
   });
 });

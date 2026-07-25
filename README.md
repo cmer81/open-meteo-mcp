@@ -11,7 +11,7 @@ A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io) 
 This MCP server provides complete access to Open-Meteo APIs, including:
 
 ### Core Weather APIs
-- **Weather Forecast** (`weather_forecast`) - 7-day forecasts with hourly and daily resolution
+- **Weather Forecast** (`weather_forecast`) - Forecasts up to 16 days (7 by default) with hourly and daily resolution
 - **Weather Archive** (`weather_archive`) - Historical ERA5 data from 1940 to present
 - **Air Quality** (`air_quality`) - PM2.5, PM10, ozone, nitrogen dioxide, pollen, European/US AQI indices, UV index and other pollutants
 - **Marine Weather** (`marine_weather`) - Wave height, wave period, wave direction and sea surface temperature
@@ -168,11 +168,15 @@ TRANSPORT=http PORT=3000 npx open-meteo-mcp-server
 
 This starts an Express server on the specified port (default: 3000) with the MCP endpoint at `/mcp`. The HTTP transport supports session management with unique session IDs per client.
 
-For production deployments, enable authentication and rate limiting:
+> **The server binds to `127.0.0.1` by default**, so it is reachable only from the local machine. To accept connections from other hosts, set `HOST=0.0.0.0` explicitly. The Docker image already does this, so published ports work without extra configuration.
+
+For production deployments, bind to a reachable interface and enable authentication and rate limiting:
 
 ```bash
-API_KEY=your-secret-key RATE_LIMIT_RPM=60 TRANSPORT=http PORT=3000 npx open-meteo-mcp-server
+HOST=0.0.0.0 API_KEY=your-secret-key RATE_LIMIT_RPM=60 TRANSPORT=http PORT=3000 npx open-meteo-mcp-server
 ```
+
+If a browser-based client connects to the server, list its origin in `ALLOWED_ORIGINS` — requests carrying an unlisted `Origin` header are rejected with `403` as DNS rebinding protection.
 
 Clients must then include the key in every request:
 ```
@@ -297,12 +301,16 @@ All environment variables are optional and have sensible defaults:
 - `OPEN_METEO_CLIMATE_API_URL` - Climate projection API URL (default: https://climate-api.open-meteo.com)
 - `TRANSPORT` - Transport mode: `http` for Streamable HTTP, omit for stdio (default: stdio)
 - `PORT` - HTTP server port when using HTTP transport (default: 3000)
+- `HOST` - Interface the HTTP transport binds to (default: `127.0.0.1`, loopback only). Set to `0.0.0.0` to accept connections from other machines. The Docker image sets this to `0.0.0.0` already, so published ports work out of the box.
 
 #### HTTP Transport Security (optional)
 
-- `API_KEY` - When set, all requests to `/mcp` must include this key via `Authorization: Bearer <key>` or `X-API-Key: <key>`. Leave unset for open access (local/dev mode).
+- `API_KEY` - When set, all requests to `/mcp` must include this key via `Authorization: Bearer <key>` or `X-API-Key: <key>`. Leave unset for open access (local/dev mode). Enforced on `GET`, `POST` and `DELETE` alike.
 - `RATE_LIMIT_RPM` - Maximum requests per minute per IP (default: `60`). HTTP transport only.
 - `TRUSTED_PROXIES` - Comma-separated list of trusted proxy IPs or CIDR ranges (e.g. `10.0.0.0/8,172.16.0.0/12`). When set, `X-Forwarded-For` is honoured only for requests originating from these addresses. Leave unset to always use the direct connection IP.
+- `ALLOWED_ORIGINS` - Comma-separated list of browser origins permitted to reach the server (e.g. `http://localhost:5173,https://app.example`). Protects against DNS rebinding: any request carrying an `Origin` header that is not listed is rejected with `403`. Requests without an `Origin` header — CLI clients and SDK transports — are unaffected. Empty by default.
+
+`/health` stays reachable without a key and without rate limiting, so container probes keep working.
 
 ## Skills
 
@@ -508,7 +516,8 @@ src/
 ├── client.ts         # HTTP client for Open-Meteo API
 ├── tools.ts          # MCP tool definitions
 ├── types.ts          # Zod validation schemas
-└── security.ts       # Auth middleware, rate limiter, IP extraction
+├── truncation.ts     # Response size capping and serialization
+└── security.ts       # Auth, origin validation, rate limiter, IP extraction
 ```
 
 ## API Coverage
@@ -546,6 +555,19 @@ The server provides comprehensive error handling with detailed error messages fo
 - API rate limits
 - Network connectivity issues
 - Invalid date ranges
+
+### Response Size Limits
+
+Tool responses are capped at 25,000 characters so a single wide query cannot overflow an LLM's context. When a response exceeds the limit, the time-series arrays (`hourly`, `daily`, `minutely_15`) are shortened by an equal ratio — keeping every parallel series aligned on the same timestamps — and two fields are added:
+
+```json
+{
+  "truncated": true,
+  "truncation_message": "Response truncated from 95538 characters to stay within the 25000-character limit. Narrow the request (start_date/end_date, forecast_days, past_days, or fewer variables) to retrieve the full data."
+}
+```
+
+To get complete data, narrow the request: shorter date range, fewer `forecast_days`/`past_days`, or fewer variables.
 
 ## Performance
 
