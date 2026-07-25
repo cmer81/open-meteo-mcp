@@ -11,7 +11,9 @@ import express from 'express';
 import { z } from 'zod';
 import { OpenMeteoClient } from './client.js';
 import {
+  createAcceptNormalizer,
   createAuthMiddleware,
+  createOriginValidator,
   createRateLimiter,
   generateSessionId,
   getClientIp,
@@ -324,31 +326,15 @@ export class OpenMeteoMCPServer {
       res.status(200).json({ status: 'ok' });
     });
 
-    app.use((req, _res, next) => {
-      const acceptHeader = req.headers.accept;
-      const tokens = acceptHeader
-        ? acceptHeader
-            .split(',')
-            .map((value) => value.trim())
-            .filter(Boolean)
-        : [];
+    app.use(createAcceptNormalizer());
 
-      const normalized = new Set(tokens.map((value) => value.toLowerCase()));
-
-      const ensureHeader = (value: string) => {
-        if (!normalized.has(value)) {
-          tokens.push(value);
-          normalized.add(value);
-        }
-      };
-
-      ensureHeader('application/json');
-      ensureHeader('text/event-stream');
-
-      req.headers.accept = tokens.join(', ');
-
-      next();
-    });
+    // Every guard below must be registered BEFORE the routes it protects:
+    // Express runs middleware in declaration order, so anything mounted after a
+    // route never runs for it. These three previously sat between the DELETE and
+    // POST handlers, leaving GET and DELETE unauthenticated and unthrottled.
+    app.use(createOriginValidator());
+    app.use(createRateLimiter());
+    app.use(createAuthMiddleware());
 
     // GET /mcp — SSE streaming for server-to-client notifications
     app.get('/mcp', async (req, res) => {
@@ -455,9 +441,6 @@ export class OpenMeteoMCPServer {
         }
       }
     });
-
-    app.use(createRateLimiter());
-    app.use(createAuthMiddleware());
 
     app.post('/mcp', async (req, res) => {
       const remoteIp = getClientIp(req);
@@ -580,9 +563,13 @@ export class OpenMeteoMCPServer {
   private startHttpTransport(): void {
     const app = this.buildExpressApp();
     const port = parseInt(process.env.PORT || '3000', 10);
+    // Loopback by default so a local server is not silently exposed on the LAN.
+    // Container images set HOST=0.0.0.0 explicitly, since the container boundary
+    // is what limits reachability there.
+    const host = process.env.HOST || '127.0.0.1';
     app
-      .listen(port, () => {
-        log('info', 'server_start', { transport: 'http', port });
+      .listen(port, host, () => {
+        log('info', 'server_start', { transport: 'http', host, port });
       })
       .on('error', (err) => {
         log('error', 'server_error', { error: err instanceof Error ? err.message : String(err) });

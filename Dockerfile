@@ -46,5 +46,8 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Run in HTTP mode by default
 ENV TRANSPORT=http
 ENV PORT=3000
+# Bind to all interfaces inside the container so published ports reach the server.
+# The server itself defaults to loopback; the container boundary is the limit here.
+ENV HOST=0.0.0.0
 
 CMD ["node", "dist/index.js"]

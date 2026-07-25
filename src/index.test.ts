@@ -1,6 +1,6 @@
 import type express from 'express';
 import supertest from 'supertest';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OpenMeteoClient } from './client.js';
 import { OpenMeteoMCPServer } from './index.js';
 import { ALL_TOOLS } from './tools.js';
@@ -387,5 +387,130 @@ describe('Full protocol round trip via McpServer#registerTool', () => {
     const text = callRes.body.result.content[0].text as string;
     expect(text.length).toBeLessThanOrEqual(CHARACTER_LIMIT);
     expect(JSON.parse(text).truncated).toBe(true);
+  });
+});
+
+describe('HTTP transport security', () => {
+  let app: express.Application;
+  const acceptBoth = 'application/json, text/event-stream';
+  const initBody = {
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'initialize',
+    params: {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'test-client', version: '1.0.0' },
+    },
+  };
+
+  beforeEach(() => {
+    process.env.NODE_ENV = 'test';
+    app = (
+      new OpenMeteoMCPServer() as unknown as { buildExpressApp(): express.Application }
+    ).buildExpressApp();
+  });
+
+  afterEach(() => {
+    delete process.env.API_KEY;
+    delete process.env.ALLOWED_ORIGINS;
+  });
+
+  // The auth and rate-limit middlewares used to be registered after the GET and
+  // DELETE routes, so Express never ran them for those two verbs: an unauthenticated
+  // caller holding a session id could terminate someone else's session.
+  describe('API key enforcement', () => {
+    beforeEach(() => {
+      process.env.API_KEY = 'test-secret';
+    });
+
+    it('rejects GET /mcp when no API key is supplied', async () => {
+      const res = await supertest(app).get('/mcp').set('mcp-session-id', 'some-session-id');
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects DELETE /mcp when no API key is supplied', async () => {
+      const res = await supertest(app).delete('/mcp').set('mcp-session-id', 'some-session-id');
+      expect(res.status).toBe(401);
+    });
+
+    it('rejects POST /mcp when no API key is supplied', async () => {
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', acceptBoth)
+        .send(initBody);
+      expect(res.status).toBe(401);
+    });
+
+    it('lets an authenticated caller through to the route handler', async () => {
+      const res = await supertest(app)
+        .delete('/mcp')
+        .set('X-API-Key', 'test-secret')
+        .set('mcp-session-id', 'unknown-session');
+      // 404 = auth passed, the session simply does not exist
+      expect(res.status).toBe(404);
+    });
+
+    it('leaves /health reachable without a key for container probes', async () => {
+      const res = await supertest(app).get('/health');
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // DNS rebinding protection: a browser page on any origin could otherwise drive
+  // a locally bound MCP server.
+  describe('Origin validation', () => {
+    it('rejects a browser Origin when none are allow-listed', async () => {
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', acceptBoth)
+        .set('Origin', 'http://evil.example')
+        .send(initBody);
+      expect(res.status).toBe(403);
+    });
+
+    it('accepts an Origin present in ALLOWED_ORIGINS', async () => {
+      process.env.ALLOWED_ORIGINS = 'http://localhost:5173,https://app.example';
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', acceptBoth)
+        .set('Origin', 'https://app.example')
+        .send(initBody);
+      expect(res.status).toBe(200);
+    });
+
+    it('accepts requests with no Origin header (non-browser clients)', async () => {
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', acceptBoth)
+        .send(initBody);
+      expect(res.status).toBe(200);
+    });
+  });
+
+  // The Accept normalizer mutates req.headers, but the SDK reads the raw Node
+  // headers through Hono, so clients sending */* used to get a 406.
+  describe('Accept header normalization', () => {
+    it('accepts a client sending Accept: */*', async () => {
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', '*/*')
+        .send(initBody);
+      expect(res.status).toBe(200);
+    });
+
+    it('accepts a client sending only application/json', async () => {
+      const res = await supertest(app)
+        .post('/mcp')
+        .set('Content-Type', 'application/json')
+        .set('Accept', 'application/json')
+        .send(initBody);
+      expect(res.status).toBe(200);
+    });
   });
 });
