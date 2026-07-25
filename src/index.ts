@@ -18,6 +18,7 @@ import {
   sanitizeErrorMessage,
 } from './security.js';
 import { ALL_TOOLS } from './tools.js';
+import { truncateResponse } from './truncation.js';
 import {
   AirQualityParamsSchema,
   ArchiveParamsSchema,
@@ -185,7 +186,7 @@ export class OpenMeteoMCPServer {
             throw new Error(`Unknown tool: ${name}`);
         }
 
-        const responseText = JSON.stringify(result, null, 2);
+        const responseText = JSON.stringify(truncateResponse(result), null, 2);
         log('info', 'tool_success', {
           tool: name,
           response_size: responseText.length,
