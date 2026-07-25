@@ -20,6 +20,7 @@
     "format": "biome format --write src/",
     "check": "biome ci src/",
     "typecheck": "tsc --noEmit",
+    "eval": "python3 evals/scripts/evaluation.py -t stdio -c node -a dist/index.js evals/evaluation.xml",
     "release": "npm run build && npm run test && npm run lint",
     "release:patch": "npm version patch && git push origin main --tags",
     "release:minor": "npm version minor && git push origin main --tags",

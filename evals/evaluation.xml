@@ -1,0 +1,42 @@
+<evaluation>
+   <qa_pair>
+      <question>Use the geocoding tool to find the coordinates of Paris, France, then retrieve ERA5 historical daily maximum temperatures for that location from 2019-07-20 to 2019-07-27 (Europe/Paris timezone). On which single date did the highest daily maximum temperature occur during that window? Answer in YYYY-MM-DD format.</question>
+      <answer>2019-07-25</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Use the geocoding tool to find Portland, Oregon, USA, then retrieve ERA5 historical daily maximum temperatures for that location from 2021-06-25 to 2021-07-02 (America/Los_Angeles timezone). On which single date did the highest daily maximum temperature occur during that window? Answer in YYYY-MM-DD format.</question>
+      <answer>2021-06-28</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Use the geocoding tool to find Chicago, Illinois, USA, then retrieve ERA5 historical daily minimum temperatures for that location from 2019-01-28 to 2019-02-01 (America/Chicago timezone). On which single date did the lowest daily minimum temperature occur during that window? Answer in YYYY-MM-DD format.</question>
+      <answer>2019-01-31</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Use the geocoding tool to search for the name "Toledo" using the default result count. Among all returned locations, identify the one with the highest elevation. In which country is it located?</question>
+      <answer>Colombia</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Use the geocoding tool to search for the name "Cambridge" using the default result count. Among all returned locations, identify the one with the highest elevation. In which US state is it located?</question>
+      <answer>Nebraska</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Using the elevation tool, compare these five cities: El Alto, Bolivia (-16.5, -68.15); Lhasa, Tibet (29.65, 91.10); Quito, Ecuador (-0.1807, -78.4678); Bogota, Colombia (4.711, -74.0721); and Kathmandu, Nepal (27.7172, 85.324). Which one sits at the highest elevation?</question>
+      <answer>El Alto</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Using the elevation tool, check these four coordinate pairs: (45.8326, 6.8652), (27.9881, 86.925), (-14.9412, -69.1917), and (31.559, 35.4732). Exactly one of them returns a negative elevation (below sea level). Which real-world location does that coordinate pair correspond to? Answer with just the location's common name.</question>
+      <answer>Dead Sea</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Using the climate_projection tool for Dubai (25.2048, 55.2708), retrieve daily maximum temperature projections for July 2050 from both the MRI_AGCM3_2_S and CMCC_CM2_VHR4 CMIP6 models (default bias correction). Which of the two models projects the higher single-day maximum temperature during that month? Answer with the exact model name.</question>
+      <answer>MRI_AGCM3_2_S</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Using the climate_projection tool for Paris, France (48.8566, 2.3522) with the MRI_AGCM3_2_S CMIP6 model (default bias correction), retrieve daily maximum temperature projections for July 2050. Which single date is projected to have the highest daily maximum temperature? Answer in YYYY-MM-DD format.</question>
+      <answer>2050-07-19</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>Use the geocoding tool to find the entry named "Cordoba" located in Argentina (Cordoba province, not Spain, Mexico, or Colombia), then retrieve ERA5 historical daily minimum temperatures for that location from 2007-07-05 to 2007-07-12 (America/Argentina/Cordoba timezone). On which single date did the lowest daily minimum temperature occur during that window? Answer in YYYY-MM-DD format.</question>
+      <answer>2007-07-11</answer>
+   </qa_pair>
+</evaluation>
