@@ -12,8 +12,10 @@ This is an Open-Meteo MCP (Model Context Protocol) server that provides comprehe
 
 - **`src/index.ts`** - Main MCP server implementation using `@modelcontextprotocol/sdk`
 - **`src/client.ts`** - HTTP client with multiple API endpoints (forecast, archive, air quality, marine, etc.)
-- **`src/tools.ts`** - MCP tool definitions with comprehensive JSON schemas
+- **`src/tools.ts`** - Tool metadata (name, title, description, annotations); input schemas come from `types.ts`
 - **`src/types.ts`** - Zod validation schemas for all API parameters and responses
+- **`src/truncation.ts`** - Caps oversized responses and serializes them for the client
+- **`src/security.ts`** - Auth, origin validation, rate limiting, trusted-proxy IP extraction (HTTP transport only)
 
 ### API Client Architecture
 
@@ -32,8 +34,12 @@ Each service can be configured via environment variables with sensible defaults.
 ### Transport Modes
 
 The server supports two transport modes (configured via `TRANSPORT` env var):
-- **stdio** (default) - Standard input/output for direct MCP client integration (Claude Desktop, etc.)
-- **Streamable HTTP** (`TRANSPORT=http`) - Express-based HTTP server with session management, listening on `PORT` (default: 3000) at `/mcp` endpoint
+- **stdio** (default) - Standard input/output for direct MCP client integration (Claude Desktop, etc.). Never write logs to stdout here — it would corrupt the protocol stream; `log()` writes to stderr.
+- **Streamable HTTP** (`TRANSPORT=http`) - Express-based HTTP server with session management, listening on `PORT` (default: 3000) at `/mcp` endpoint, bound to `HOST` (default: `127.0.0.1`, loopback only)
+
+### HTTP middleware ordering
+
+Express runs middleware in declaration order, so every guard must be registered **before** the routes it protects. `createOriginValidator`, `createRateLimiter` and `createAuthMiddleware` are mounted ahead of the `/mcp` GET, POST and DELETE handlers; mounting them later silently leaves the earlier routes unauthenticated. `/health` is declared before the guards on purpose, so container probes work without a key.
 
 ### Tool System
 
@@ -82,6 +88,13 @@ The server uses environment variables for API endpoints with fallback defaults:
 Transport configuration:
 - `TRANSPORT` - Set to `http` to enable Streamable HTTP mode (default: stdio)
 - `PORT` - HTTP server port when using HTTP transport (default: 3000)
+- `HOST` - Interface to bind (default: `127.0.0.1`). Set `0.0.0.0` to accept remote connections; the Docker image already does.
+
+HTTP transport security (all optional, HTTP mode only):
+- `API_KEY` - When set, every `/mcp` request needs `Authorization: Bearer <key>` or `X-API-Key`. Unset = open mode.
+- `RATE_LIMIT_RPM` - Requests per minute per client IP (default: 60)
+- `TRUSTED_PROXIES` - Comma-separated IPs/CIDRs whose `X-Forwarded-For` is trusted. Unset = header ignored.
+- `ALLOWED_ORIGINS` - Comma-separated browser origins allowed (DNS rebinding protection). Empty by default: any request carrying an `Origin` header is rejected with 403. Requests without one are unaffected.
 
 ## Key Implementation Patterns
 
@@ -98,9 +111,16 @@ The `buildParams` method in `OpenMeteoClient` handles parameter serialization:
 - Proper User-Agent headers for API identification
 
 ### Response Formatting
-All tool responses return JSON-stringified weather data with 2-space indentation for readability in LLM contexts.
+All tool responses go through `serializeToolResponse()` (`src/truncation.ts`), which truncates if needed and JSON-stringifies with 2-space indentation. Always use it rather than calling `JSON.stringify` at the call site: truncation measures the text *as emitted*, and indentation roughly doubles the character count, so measuring one form while emitting another lets responses blow past the limit.
+
+Responses over 25,000 characters have their `hourly`/`daily`/`minutely_15` arrays shrunk by an equal ratio (keeping parallel series aligned) or their `results` array trimmed, and gain `truncated: true` plus a `truncation_message`.
+
+### Adding a tool with cross-field validation
+`registerTool` publishes the JSON schema by introspecting the Zod object. A `.refine()`/`.superRefine()` returns a **ZodEffects**, which the SDK cannot introspect — it would publish an empty `{}` input schema while still validating strictly, leaving clients unable to know what to send. `registerReadOnlyTool` therefore unwraps via `.innerType()` for publication and re-applies the full schema (effects included) inside the handler. Keep both halves when adding a tool whose parameters have cross-field rules, such as `start_date <= end_date`.
 
 ## Schema Validation
+
+All param schemas are `.strict()`, so unknown keys are rejected rather than silently forwarded to the upstream API.
 
 Uses Zod for runtime validation of:
 - Coordinate bounds (latitude: -90 to 90, longitude: -180 to 180)
