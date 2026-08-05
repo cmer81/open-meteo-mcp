@@ -1,5 +1,7 @@
 # Open-Meteo MCP Server
 
+[![MCP Toplist](https://mcptoplist.com/badge/glama%2Fcmer81%2Fopen-meteo-mcp.svg)](https://mcptoplist.com/server/glama%2Fcmer81%2Fopen-meteo-mcp)
+
 [![npm version](https://badge.fury.io/js/open-meteo-mcp-server.svg)](https://badge.fury.io/js/open-meteo-mcp-server)
 [![GitHub release](https://img.shields.io/github/release/cmer81/open-meteo-mcp.svg)](https://github.com/cmer81/open-meteo-mcp/releases)
 [![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue.svg)](https://github.com/cmer81/open-meteo-mcp/pkgs/container/open-meteo-mcp)
