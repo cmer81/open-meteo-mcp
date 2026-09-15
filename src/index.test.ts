@@ -51,7 +51,7 @@ describe('Module imports', () => {
 
     expect(() => GeocodingParamsSchema.parse(validGeocodingParams)).not.toThrow();
 
-    // Test avec les nouveaux paramètres optionnels
+    // Test the newer optional parameters
     const validGeocodingParamsWithOptional = {
       name: 'Berlin',
       count: 3,
@@ -71,11 +71,11 @@ describe('Module imports', () => {
     // Test avec un code pays invalide
     const invalidCountryCode = {
       name: 'Lyon',
-      countryCode: 'FRA', // Doit être 2 caractères
+      countryCode: 'FRA', // Must be exactly 2 characters
     };
 
     expect(() => GeocodingParamsSchema.parse(invalidCountryCode)).toThrow(
-      'Le code pays doit être au format ISO-3166-1 alpha2',
+      'Country code must be an ISO-3166-1 alpha2 code',
     );
   });
 
@@ -84,7 +84,7 @@ describe('Module imports', () => {
     expect(Array.isArray(ALL_TOOLS)).toBe(true);
     expect(ALL_TOOLS.length).toBeGreaterThan(0);
 
-    // Vérifier que l'outil de géocodage est présent
+    // Check that the geocoding tool is present
     const geocodingTool = ALL_TOOLS.find((tool) => tool.name === 'geocoding');
     expect(geocodingTool).toBeDefined();
     expect(geocodingTool?.description).toContain('Search for locations');
