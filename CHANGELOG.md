@@ -8,6 +8,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [2.0.2] - 2026-09-15
+
+Maintenance release. No API or behaviour changes.
+
+### Fixed
+
+- **Geocoding validation errors are now in English.** Invalid input to
+  `geocoding` was rejected with French text (`Le nom doit contenir au moins 2
+  caractères`, `Le code pays doit être au format ISO-3166-1 alpha2`). These are
+  not internal strings: Zod validation errors travel through the MCP error
+  response to the client and the calling model, so a model correcting its own
+  bad call got French while every other message in the server was English.
+
+### Security
+
+- **Updated dependencies to clear six transitive advisories**, two of them
+  high-severity. `ip-address` 10.2.0 → 10.7.2 (SSRF and trust-boundary bypass,
+  reached via `express-rate-limit`, which sits on the HTTP transport's request
+  path next to the `TRUSTED_PROXIES` / `X-Forwarded-For` handling), `hono`
+  4.12.32 → 4.13.8 (cache-key and proxy interpretation differential), and `qs`
+  6.15.3 → 6.16.0 (array-limit bypass, denial of service via `isBuffer`).
+  `npm audit` reports no vulnerabilities.
+
+### Changed
+
+- `@modelcontextprotocol/sdk` 1.26.0 → 1.30.0, `axios` 1.18.1 → 1.20.0,
+  `dotenv` 17.3.1 → 17.4.2, `express` 4.22.2 → 4.22.3, plus development
+  tooling. Declared version ranges were tightened to the versions actually
+  tested, so `package.json` and the lockfile no longer disagree about the
+  supported floor.
+
 ## [2.0.1] - 2026-07-26
 
 Non-breaking schema documentation improvement.
