@@ -70,7 +70,58 @@ npm run typecheck
 
 # Linting
 npm run lint
+
+# End-to-end smoke test (network; requires a prior `npm run build`)
+npm run smoke
 ```
+
+## Pre-release verification
+
+`npm test` proves the code is internally consistent; it mocks the network, so it
+cannot tell you whether the server still *works*. Two checks cover that gap and
+both should be green before tagging:
+
+```bash
+npm run build && npm run smoke   # every tool, once, against the live API
+npm audit --audit-level high --omit=dev
+```
+
+`npm run smoke` (`scripts/smoke-test.mjs`) starts the built server over stdio
+with a real MCP client and calls all 17 tools. Run it after **any**
+`@modelcontextprotocol/sdk` or `zod` upgrade — it is the only check that catches
+a tool publishing an **empty input schema**, the failure mode described under
+"Adding a tool with cross-field validation" below. The server still validates
+strictly in that state and every unit test still passes, so the regression is
+invisible until a client cannot work out what to send. The script also fails if
+a tool has no call defined for it, so a newly added tool cannot slip through
+untested.
+
+## Releasing
+
+**Do not run `npm publish` locally** — publishing is automated and the version
+number is burned permanently once used. `.github/workflows/release.yml` triggers
+on any `v*` tag and runs `npm ci` → `npm test` → `npm run build` → `npm audit`
+→ `npm publish --provenance`, then creates the GitHub release.
+
+```bash
+npm run release:patch   # 2.0.2 -> 2.0.3
+npm run release:minor   # 2.0.2 -> 2.1.0
+npm run release:major   # 2.0.2 -> 3.0.0
+```
+
+Each runs `npm version <level> && git push origin main --tags`, which is what
+triggers the workflow. Before invoking one:
+
+1. Land the changes on `main` (the tag is cut from whatever `main` points at).
+2. Add the version's entry to `CHANGELOG.md` and commit it — `npm version`
+   creates the release commit immediately after, so a changelog added later
+   lands in the *next* release.
+3. Run the pre-release verification above.
+
+After the workflow reports success, npm still takes a few minutes to serve the
+new version. `npm view open-meteo-mcp-server version` returning the previous
+number right after a publish is propagation lag, not a failed release — confirm
+with the workflow log, which ends with `+ open-meteo-mcp-server@<version>`.
 
 ## Evaluations
 
