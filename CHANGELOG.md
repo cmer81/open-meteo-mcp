@@ -8,6 +8,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [2.1.0] - 2026-09-15
+
+Major dependency upgrades. Tool names, parameters, schemas and responses are
+unchanged; one error-reporting detail differs, described below.
+
+### Changed
+
+- **Cross-field validation errors now surface as MCP `-32602` instead of an
+  `isError` tool result.** Tools with cross-field rules (`weather_archive` and
+  `climate_projection`, both requiring `start_date <= end_date`) previously
+  enforced them inside the handler and returned the failure as tool content.
+  The SDK now validates against the full schema itself and rejects the call
+  before dispatch. The message text is unchanged
+  (`start_date must be before or equal to end_date`), but a client that
+  branches on `isError` will see the difference.
+- Upgraded to zod 4, express 5, TypeScript 7, vitest 5 and `@types/node` 22.
+- The `ZodEffects` workaround in tool registration is gone. Under zod 3,
+  `.refine()` wrapped the object in a `ZodEffects` the SDK could not
+  introspect — it published an empty `{}` input schema while still validating
+  strictly — so the schema had to be unwrapped via `.innerType()` before
+  publication. Zod 4 attaches refinements to the object itself, so schemas
+  publish correctly with no special handling.
+- `moduleResolution` moved from the removed `node10` setting to `nodenext`,
+  matching what this package already is: ESM with explicit `.js` extensions in
+  relative imports.
+
+### Added
+
+- `npm run smoke` (`scripts/smoke-test.mjs`) starts the built server over stdio
+  with a real MCP client and calls all 17 tools against the live API. It is the
+  only check that catches a tool publishing an empty input schema — a silent
+  failure where the server keeps validating strictly and every unit test keeps
+  passing while clients lose the schema. Not part of `npm test`: it needs
+  network access.
+- The release workflow now runs `npm audit --audit-level high --omit=dev`
+  before publishing. The audit previously ran only in CI on push and pull
+  requests, so a tag could publish with known advisories.
+
 ## [2.0.2] - 2026-09-15
 
 Maintenance release. No API or behaviour changes.

@@ -175,7 +175,11 @@ All tool responses go through `serializeToolResponse()` (`src/truncation.ts`), w
 Responses over 25,000 characters have their `hourly`/`daily`/`minutely_15` arrays shrunk by an equal ratio (keeping parallel series aligned) or their `results` array trimmed, and gain `truncated: true` plus a `truncation_message`.
 
 ### Adding a tool with cross-field validation
-`registerTool` publishes the JSON schema by introspecting the Zod object. A `.refine()`/`.superRefine()` returns a **ZodEffects**, which the SDK cannot introspect — it would publish an empty `{}` input schema while still validating strictly, leaving clients unable to know what to send. `registerReadOnlyTool` therefore unwraps via `.innerType()` for publication and re-applies the full schema (effects included) inside the handler. Keep both halves when adding a tool whose parameters have cross-field rules, such as `start_date <= end_date`.
+`registerTool` publishes the JSON schema by introspecting the Zod object. Under Zod 3 a `.refine()`/`.superRefine()` returned a **ZodEffects** the SDK could not introspect: it published an empty `{}` input schema while still validating strictly, leaving clients unable to know what to send. `registerReadOnlyTool` worked around this by unwrapping via `.innerType()` before publication.
+
+Zod 4 attaches refinements to the object itself instead of wrapping it, so a refined schema introspects correctly and that workaround is gone — `registerReadOnlyTool` passes the schema straight through. Consequently the SDK now enforces cross-field rules itself and a violation surfaces as an MCP `-32602` error rather than an `isError` tool result; the message text (e.g. `start_date must be before or equal to end_date`) is unchanged.
+
+This is a silent failure mode if it ever regresses: the server keeps validating strictly and every unit test keeps passing while clients lose the schema. `npm run smoke` asserts no tool publishes an empty schema — run it after any SDK or Zod upgrade.
 
 ## Schema Validation
 

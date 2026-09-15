@@ -8,7 +8,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import express from 'express';
-import { z } from 'zod';
+import type { z } from 'zod';
 import { OpenMeteoClient } from './client.js';
 import {
   createAcceptNormalizer,
@@ -130,26 +130,31 @@ export class OpenMeteoMCPServer {
       cb: unknown,
     ) => void;
 
-    // `.refine()` wraps the object in a ZodEffects, which the SDK cannot
-    // introspect: it would publish an empty `{}` input schema while still
-    // validating strictly, leaving clients with no idea what to send. Publish
-    // the underlying object and re-apply the effects below.
-    const objectSchema = schema instanceof z.ZodEffects ? schema.innerType() : schema;
-
+    // Under Zod 3, `.refine()` wrapped the object in a ZodEffects the SDK could
+    // not introspect: it published an empty `{}` input schema while still
+    // validating strictly, leaving clients with no idea what to send. That
+    // needed unwrapping via `.innerType()` before publication.
+    //
+    // Zod 4 attaches refinements to the object itself instead of wrapping it,
+    // so the schema introspects correctly as-is and the workaround is gone.
+    // `npm run smoke` asserts no tool publishes an empty schema, which is what
+    // guards this.
     registerToolUntyped(
       meta.name,
       {
         title: meta.title,
         description: meta.description,
-        inputSchema: objectSchema,
+        inputSchema: schema,
         annotations: meta.annotations,
       },
       async (params: never) => {
         const start = Date.now();
         log('info', 'tool_call', { tool: meta.name, args: params });
 
-        // Cross-field rules (e.g. start_date <= end_date) live in the effects
-        // the SDK never sees, so they are enforced here.
+        // The SDK now validates against the same schema before dispatching, so
+        // this rarely rejects anything. It is kept because it is what applies
+        // the schema's defaults (e.g. cell_selection) to the params the handler
+        // receives, rather than relying on the SDK to hand back parsed data.
         const refined = schema.safeParse(params);
         if (!refined.success) {
           const message = refined.error.issues.map((issue) => issue.message).join('; ');
