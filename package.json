@@ -24,7 +24,8 @@
     "release": "npm run build && npm run test && npm run lint",
     "release:patch": "npm version patch && git push origin main --tags",
     "release:minor": "npm version minor && git push origin main --tags",
-    "release:major": "npm version major && git push origin main --tags"
+    "release:major": "npm version major && git push origin main --tags",
+    "smoke": "node scripts/smoke-test.mjs"
   },
   "keywords": [
     "mcp",
