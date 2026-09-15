@@ -1554,10 +1554,10 @@ export const WeatherResponseSchema = z.object({
   elevation: z.number(),
   generationtime_ms: z.number(),
   utc_offset_seconds: z.number(),
-  hourly: z.record(z.array(z.union([z.number(), z.string()]))).optional(),
-  hourly_units: z.record(z.string()).optional(),
-  daily: z.record(z.array(z.union([z.number(), z.string()]))).optional(),
-  daily_units: z.record(z.string()).optional(),
+  hourly: z.record(z.string(), z.array(z.union([z.number(), z.string()]))).optional(),
+  hourly_units: z.record(z.string(), z.string()).optional(),
+  daily: z.record(z.string(), z.array(z.union([z.number(), z.string()]))).optional(),
+  daily_units: z.record(z.string(), z.string()).optional(),
   current_weather: z
     .object({
       time: z.string(),
