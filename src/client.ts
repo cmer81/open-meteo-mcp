@@ -45,7 +45,7 @@ export class OpenMeteoClient {
       },
     };
 
-    // Utilisation des variables d'environnement avec des valeurs par défaut
+    // Environment variables with sensible defaults
     const airQualityURL =
       process.env.OPEN_METEO_AIR_QUALITY_API_URL || 'https://air-quality-api.open-meteo.com';
     const marineURL = process.env.OPEN_METEO_MARINE_API_URL || 'https://marine-api.open-meteo.com';
