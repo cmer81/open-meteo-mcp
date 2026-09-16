@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance } from 'axios';
+import { LRUCache } from 'lru-cache';
 import type {
   AirQualityParams,
   ArchiveParams,
@@ -22,6 +23,21 @@ import type {
   WeatherResponse,
 } from './types.js';
 
+export const CACHE_MAX_BYTES = 50_000_000;
+
+export const CACHE_TTL_MS = {
+  forecast: 15 * 60 * 1000,
+  ensemble: 15 * 60 * 1000,
+  airQuality: 30 * 60 * 1000,
+  marine: 30 * 60 * 1000,
+  flood: 60 * 60 * 1000,
+  seasonal: 6 * 60 * 60 * 1000,
+  archive: 24 * 60 * 60 * 1000,
+  climate: 24 * 60 * 60 * 1000,
+  geocoding: 7 * 24 * 60 * 60 * 1000,
+  elevation: 30 * 24 * 60 * 60 * 1000,
+} as const;
+
 export class OpenMeteoClient {
   private client: AxiosInstance;
   private airQualityClient: AxiosInstance;
@@ -32,6 +48,7 @@ export class OpenMeteoClient {
   private geocodingClient: AxiosInstance;
   private floodClient: AxiosInstance;
   private climateClient: AxiosInstance;
+  private cache: LRUCache<string, object> | undefined;
 
   constructor(
     baseURL: string = process.env.OPEN_METEO_API_URL || 'https://api.open-meteo.com',
@@ -70,6 +87,10 @@ export class OpenMeteoClient {
     this.geocodingClient = axios.create({ baseURL: geocodingURL, ...config });
     this.floodClient = axios.create({ baseURL: floodURL, ...config });
     this.climateClient = axios.create({ baseURL: climateURL, ...config });
+
+    const configured = Number(process.env.OPEN_METEO_CACHE_MAX_BYTES ?? CACHE_MAX_BYTES);
+    const maxSize = Number.isFinite(configured) && configured >= 0 ? configured : CACHE_MAX_BYTES;
+    this.cache = maxSize > 0 ? new LRUCache<string, object>({ maxSize }) : undefined;
 
     this.setupErrorInterceptors();
   }
@@ -124,122 +145,155 @@ export class OpenMeteoClient {
     return result;
   }
 
-  async getForecast(params: ForecastParams): Promise<WeatherResponse> {
-    const response = await this.client
-      .get('/v1/forecast', { params: this.buildParams(params) })
+  private async cachedGet<T extends object>(
+    instance: AxiosInstance,
+    path: string,
+    params: Record<string, unknown>,
+    ttl: number,
+  ): Promise<T> {
+    const query = this.buildParams(params);
+    const sorted = Object.entries(query).sort(([a], [b]) => a.localeCompare(b));
+    const key = `${path}?${new URLSearchParams(sorted).toString()}`;
+
+    const hit = this.cache?.get(key);
+    if (hit !== undefined) return hit as T;
+
+    const response = await instance
+      .get(path, { params: query })
       .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    const data = response.data as T;
+
+    // Open-Meteo replies chunked, so there is no Content-Length to size from.
+    this.cache?.set(key, data, { ttl, size: Math.max(JSON.stringify(data).length, 1) });
+
+    return data;
+  }
+
+  async getForecast(params: ForecastParams): Promise<WeatherResponse> {
+    return this.cachedGet<WeatherResponse>(
+      this.client,
+      '/v1/forecast',
+      params,
+      CACHE_TTL_MS.forecast,
+    );
   }
 
   async getArchive(params: ArchiveParams): Promise<WeatherResponse> {
-    const response = await this.archiveClient
-      .get('/v1/archive', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(
+      this.archiveClient,
+      '/v1/archive',
+      params,
+      CACHE_TTL_MS.archive,
+    );
   }
 
   async getDwdIcon(params: DwdIconParams): Promise<WeatherResponse> {
-    const response = await this.client
-      .get('/v1/dwd-icon', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(
+      this.client,
+      '/v1/dwd-icon',
+      params,
+      CACHE_TTL_MS.forecast,
+    );
   }
 
   async getGfs(params: GfsParams): Promise<WeatherResponse> {
-    const response = await this.client
-      .get('/v1/gfs', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(this.client, '/v1/gfs', params, CACHE_TTL_MS.forecast);
   }
 
   async getMeteoFrance(params: MeteoFranceParams): Promise<WeatherResponse> {
-    const response = await this.client
-      .get('/v1/meteofrance', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(
+      this.client,
+      '/v1/meteofrance',
+      params,
+      CACHE_TTL_MS.forecast,
+    );
   }
 
   async getEcmwf(params: EcmwfParams): Promise<WeatherResponse> {
-    const response = await this.client
-      .get('/v1/ecmwf', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(this.client, '/v1/ecmwf', params, CACHE_TTL_MS.forecast);
   }
 
   async getJma(params: JmaParams): Promise<WeatherResponse> {
-    const response = await this.client
-      .get('/v1/jma', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(this.client, '/v1/jma', params, CACHE_TTL_MS.forecast);
   }
 
   async getMetno(params: MetnoParams): Promise<WeatherResponse> {
-    const response = await this.client
-      .get('/v1/metno', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(this.client, '/v1/metno', params, CACHE_TTL_MS.forecast);
   }
 
   async getGem(params: GemParams): Promise<WeatherResponse> {
-    const response = await this.client
-      .get('/v1/gem', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(this.client, '/v1/gem', params, CACHE_TTL_MS.forecast);
   }
 
   async getAirQuality(params: AirQualityParams): Promise<WeatherResponse> {
-    const response = await this.airQualityClient
-      .get('/v1/air-quality', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(
+      this.airQualityClient,
+      '/v1/air-quality',
+      params,
+      CACHE_TTL_MS.airQuality,
+    );
   }
 
   async getMarine(params: MarineParams): Promise<WeatherResponse> {
-    const response = await this.marineClient
-      .get('/v1/marine', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(
+      this.marineClient,
+      '/v1/marine',
+      params,
+      CACHE_TTL_MS.marine,
+    );
   }
 
   async getEnsemble(params: EnsembleParams): Promise<WeatherResponse> {
-    const response = await this.ensembleClient
-      .get('/v1/ensemble', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(
+      this.ensembleClient,
+      '/v1/ensemble',
+      params,
+      CACHE_TTL_MS.ensemble,
+    );
   }
 
   async getElevation(params: ElevationParams): Promise<ElevationResponse> {
-    const response = await this.client
-      .get('/v1/elevation', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<ElevationResponse>(
+      this.client,
+      '/v1/elevation',
+      params,
+      CACHE_TTL_MS.elevation,
+    );
   }
 
   async getFlood(params: FloodParams): Promise<WeatherResponse> {
-    const response = await this.floodClient
-      .get('/v1/flood', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(
+      this.floodClient,
+      '/v1/flood',
+      params,
+      CACHE_TTL_MS.flood,
+    );
   }
 
   async getSeasonal(params: SeasonalParams): Promise<WeatherResponse> {
-    const response = await this.seasonalClient
-      .get('/v1/seasonal', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(
+      this.seasonalClient,
+      '/v1/seasonal',
+      params,
+      CACHE_TTL_MS.seasonal,
+    );
   }
 
   async getClimate(params: ClimateParams): Promise<WeatherResponse> {
-    const response = await this.climateClient
-      .get('/v1/climate', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<WeatherResponse>(
+      this.climateClient,
+      '/v1/climate',
+      params,
+      CACHE_TTL_MS.climate,
+    );
   }
 
   async getGeocoding(params: GeocodingParams): Promise<GeocodingResponse> {
-    const response = await this.geocodingClient
-      .get('/v1/search', { params: this.buildParams(params) })
-      .catch(OpenMeteoClient.mapHttpError);
-    return response.data;
+    return this.cachedGet<GeocodingResponse>(
+      this.geocodingClient,
+      '/v1/search',
+      params,
+      CACHE_TTL_MS.geocoding,
+    );
   }
 }

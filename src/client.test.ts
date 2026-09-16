@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { OpenMeteoClient } from './client.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CACHE_TTL_MS, OpenMeteoClient } from './client.js';
 
 describe('OpenMeteoClient error interceptor', () => {
   let client: OpenMeteoClient;
@@ -98,5 +98,95 @@ describe('OpenMeteoClient error interceptor', () => {
         end_date: 'bad',
       }),
     ).rejects.toThrow('Invalid request parameters: Invalid date range');
+  });
+});
+
+describe('OpenMeteoClient response cache', () => {
+  const getSpy = (client: OpenMeteoClient, name: string) =>
+    vi.spyOn((client as unknown as Record<string, { get: unknown }>)[name], 'get' as never);
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('serves a repeated identical request from cache', async () => {
+    const client = new OpenMeteoClient();
+    const get = getSpy(client, 'client').mockResolvedValue({ data: { hourly: {} } } as never);
+
+    await client.getForecast({ latitude: 48.85, longitude: 2.35 });
+    await client.getForecast({ latitude: 48.85, longitude: 2.35 });
+
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it('keys on the path so sibling endpoints do not collide', async () => {
+    const client = new OpenMeteoClient();
+    const get = getSpy(client, 'client').mockImplementation((async (path: string) => ({
+      data: { path },
+    })) as never);
+
+    const gfs = await client.getGfs({ latitude: 48.85, longitude: 2.35 });
+    const jma = await client.getJma({ latitude: 48.85, longitude: 2.35 });
+
+    expect(get).toHaveBeenCalledTimes(2);
+    expect(gfs).not.toEqual(jma);
+  });
+
+  it('ignores parameter order when building the key', async () => {
+    const client = new OpenMeteoClient();
+    const get = getSpy(client, 'client').mockResolvedValue({ data: { hourly: {} } } as never);
+
+    await client.getForecast({ latitude: 48.85, longitude: 2.35 });
+    await client.getForecast({ longitude: 2.35, latitude: 48.85 });
+
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not cache failures', async () => {
+    const client = new OpenMeteoClient();
+    const get = getSpy(client, 'client')
+      .mockRejectedValueOnce(new Error('Network timeout'))
+      .mockResolvedValue({ data: { hourly: {} } } as never);
+
+    await expect(client.getForecast({ latitude: 48.85, longitude: 2.35 })).rejects.toThrow(
+      'Network timeout',
+    );
+    await client.getForecast({ latitude: 48.85, longitude: 2.35 });
+
+    expect(get).toHaveBeenCalledTimes(2);
+  });
+
+  it('caches each endpoint with its own TTL', async () => {
+    const client = new OpenMeteoClient();
+    getSpy(client, 'client').mockResolvedValue({ data: { hourly: {} } } as never);
+    getSpy(client, 'geocodingClient').mockResolvedValue({ data: { results: [] } } as never);
+    const set = vi.spyOn((client as unknown as { cache: { set: unknown } }).cache, 'set' as never);
+
+    await client.getForecast({ latitude: 48.85, longitude: 2.35 });
+    await client.getGeocoding({ name: 'Paris' });
+
+    expect(set).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('/v1/forecast'),
+      expect.anything(),
+      expect.objectContaining({ ttl: CACHE_TTL_MS.forecast }),
+    );
+    expect(set).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('/v1/search'),
+      expect.anything(),
+      expect.objectContaining({ ttl: CACHE_TTL_MS.geocoding }),
+    );
+  });
+
+  it('is disabled when OPEN_METEO_CACHE_MAX_BYTES is 0', async () => {
+    vi.stubEnv('OPEN_METEO_CACHE_MAX_BYTES', '0');
+    const client = new OpenMeteoClient();
+    const get = getSpy(client, 'client').mockResolvedValue({ data: { hourly: {} } } as never);
+
+    await client.getForecast({ latitude: 48.85, longitude: 2.35 });
+    await client.getForecast({ latitude: 48.85, longitude: 2.35 });
+
+    expect(get).toHaveBeenCalledTimes(2);
   });
 });

@@ -299,6 +299,7 @@ All environment variables are optional and have sensible defaults:
 - `OPEN_METEO_GEOCODING_API_URL` - Geocoding API URL (default: https://geocoding-api.open-meteo.com)
 - `OPEN_METEO_FLOOD_API_URL` - Flood forecast API URL (default: https://flood-api.open-meteo.com)
 - `OPEN_METEO_CLIMATE_API_URL` - Climate projection API URL (default: https://climate-api.open-meteo.com)
+- `OPEN_METEO_CACHE_MAX_BYTES` - Maximum size of the in-memory response cache in bytes (default: `50000000`). Set to `0` to disable caching. Identical requests are served from the cache until their per-endpoint TTL expires: 15 minutes for forecasts and ensembles, 30 minutes for air quality and marine, 1 hour for flood, 6 hours for seasonal, 24 hours for archive and climate, 7 days for geocoding, 30 days for elevation.
 - `TRANSPORT` - Transport mode: `http` for Streamable HTTP, omit for stdio (default: stdio)
 - `PORT` - HTTP server port when using HTTP transport (default: 3000)
 - `HOST` - Interface the HTTP transport binds to (default: `127.0.0.1`, loopback only). Set to `0.0.0.0` to accept connections from other machines. The Docker image sets this to `0.0.0.0` already, so published ports work out of the box.

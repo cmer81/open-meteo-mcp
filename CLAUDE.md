@@ -144,6 +144,9 @@ The server uses environment variables for API endpoints with fallback defaults:
 - `OPEN_METEO_FLOOD_API_URL` - Flood forecast service
 - `OPEN_METEO_CLIMATE_API_URL` - Climate projection service
 
+Caching:
+- `OPEN_METEO_CACHE_MAX_BYTES` - Size cap for the in-memory LRU response cache (default: 50000000). `0` disables it.
+
 Transport configuration:
 - `TRANSPORT` - Set to `http` to enable Streamable HTTP mode (default: stdio)
 - `PORT` - HTTP server port when using HTTP transport (default: 3000)
@@ -173,6 +176,28 @@ The `buildParams` method in `OpenMeteoClient` handles parameter serialization:
 All tool responses go through `serializeToolResponse()` (`src/truncation.ts`), which truncates if needed and JSON-stringifies with 2-space indentation. Always use it rather than calling `JSON.stringify` at the call site: truncation measures the text *as emitted*, and indentation roughly doubles the character count, so measuring one form while emitting another lets responses blow past the limit.
 
 Responses over 25,000 characters have their `hourly`/`daily`/`minutely_15` arrays shrunk by an equal ratio (keeping parallel series aligned) or their `results` array trimmed, and gain `truncated: true` plus a `truncation_message`.
+
+### Response caching
+
+`cachedGet()` in `OpenMeteoClient` wraps every endpoint call in an `lru-cache`
+keyed on the request. Three invariants are easy to break:
+
+- **The key includes the request path.** Nine tools share the same axios
+  instance (`this.client`) and differ only by path, and several accept
+  identical parameters, so keying on parameters alone would serve GFS data for
+  a JMA request.
+- **Parameter names are sorted before the key is built.** `buildParams`
+  preserves insertion order, so the same request arriving with keys in a
+  different order would otherwise miss the cache.
+- **The cache is bounded by bytes, not entry count** (`maxSize`, with the size
+  passed explicitly on `set`). Responses can be several MB, so a count-bounded
+  cache would reintroduce the memory exhaustion the axios limits prevent.
+  Open-Meteo replies with `Transfer-Encoding: chunked` and no `Content-Length`,
+  so the size is computed from the serialized payload.
+
+Failures are never cached — only a resolved response is stored, so a transient
+429 or 5xx cannot be replayed for the lifetime of a TTL. TTLs are per endpoint
+in `CACHE_TTL_MS`, from 15 minutes for forecasts to 30 days for elevation.
 
 ### Adding a tool with cross-field validation
 `registerTool` publishes the JSON schema by introspecting the Zod object. Under Zod 3 a `.refine()`/`.superRefine()` returned a **ZodEffects** the SDK could not introspect: it published an empty `{}` input schema while still validating strictly, leaving clients unable to know what to send. `registerReadOnlyTool` worked around this by unwrapping via `.innerType()` before publication.
