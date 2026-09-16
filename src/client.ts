@@ -22,6 +22,12 @@ import type {
   WeatherResponse,
 } from './types.js';
 
+export const MAX_RESPONSE_BYTES = 5_000_000;
+
+export const MAX_ARCHIVE_RESPONSE_BYTES = 10_000_000;
+
+export const MAX_REQUEST_BODY_BYTES = 1_000_000;
+
 export class OpenMeteoClient {
   private client: AxiosInstance;
   private airQualityClient: AxiosInstance;
@@ -39,6 +45,8 @@ export class OpenMeteoClient {
   ) {
     const config = {
       timeout: 30000,
+      maxContentLength: MAX_RESPONSE_BYTES,
+      maxBodyLength: MAX_REQUEST_BODY_BYTES,
       headers: {
         Accept: 'application/json',
         'User-Agent': `Open-Meteo-MCP-Server/${version}`,
@@ -64,12 +72,20 @@ export class OpenMeteoClient {
     this.client = axios.create({ baseURL, ...config });
     this.airQualityClient = axios.create({ baseURL: airQualityURL, ...config });
     this.marineClient = axios.create({ baseURL: marineURL, ...config });
-    this.archiveClient = axios.create({ baseURL: archiveURL, ...config });
+    this.archiveClient = axios.create({
+      baseURL: archiveURL,
+      ...config,
+      maxContentLength: MAX_ARCHIVE_RESPONSE_BYTES,
+    });
     this.seasonalClient = axios.create({ baseURL: seasonalURL, ...config });
     this.ensembleClient = axios.create({ baseURL: ensembleURL, ...config });
     this.geocodingClient = axios.create({ baseURL: geocodingURL, ...config });
     this.floodClient = axios.create({ baseURL: floodURL, ...config });
-    this.climateClient = axios.create({ baseURL: climateURL, ...config });
+    this.climateClient = axios.create({
+      baseURL: climateURL,
+      ...config,
+      maxContentLength: MAX_ARCHIVE_RESPONSE_BYTES,
+    });
 
     this.setupErrorInterceptors();
   }
@@ -92,6 +108,12 @@ export class OpenMeteoClient {
 
   private static mapHttpError(error: unknown): never {
     if (axios.isAxiosError(error)) {
+      if (error.message.startsWith('maxContentLength size of')) {
+        throw new Error(
+          'Response too large to process. Narrow the request: shorten the start_date/end_date range or request fewer variables.',
+        );
+      }
+
       const status = error.response?.status;
       const data = error.response?.data as Record<string, unknown> | undefined;
       const apiMessage =
