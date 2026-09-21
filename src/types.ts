@@ -493,8 +493,21 @@ export const ForecastModelsSchema = z
   ])
   .optional();
 
-// Valid model IDs for the dedicated /v1/ecmwf endpoint (different from /v1/forecast)
-export const EcmwfModelsSchema = z.enum(['ecmwf_ifs', 'ecmwf_ifs025', 'best_match']).optional();
+// Model IDs verified against the live /v1/ecmwf endpoint. The endpoint accepts the
+// same model namespace as /v1/forecast and only differs in its default model
+// (ecmwf_ifs025); this list is the ECMWF subset of it.
+export const EcmwfModelsSchema = z
+  .enum([
+    'best_match',
+    'ecmwf_ifs',
+    'ecmwf_ifs04',
+    'ecmwf_ifs025',
+    'ecmwf_aifs025',
+    'ecmwf_aifs025_single',
+    'ecmwf_ifs_europe_ensemble_mean',
+    'ecmwf_aifs_europe_ensemble_mean',
+  ])
+  .optional();
 
 // Note: the ensemble.yml OpenAPI spec documents dwd_*_eps / cmc_gem_geps names, but
 // the live /v1/ensemble API rejects them (verified) and only accepts the names below.
