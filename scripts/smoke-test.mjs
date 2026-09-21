@@ -8,11 +8,13 @@
  * the unit tests cannot:
  *
  *   - a tool publishing an empty input schema. `registerTool` derives the
- *     published JSON schema by introspecting the Zod object, and a `.refine()`
- *     returns a ZodEffects the SDK cannot introspect. `registerReadOnlyTool`
- *     unwraps it via `.innerType()`; if an SDK upgrade changes that
- *     introspection, schemas silently go empty and clients stop knowing what to
- *     send. Nothing in the unit tests would fail.
+ *     published JSON schema by introspecting the Zod object. Under Zod 3 a
+ *     `.refine()` wrapped the object in a ZodEffects the SDK could not
+ *     introspect, which is why `weather_archive` and `climate_projection` once
+ *     published `{}`. Zod 4 attaches refinements to the object itself, so no
+ *     unwrapping happens today; if an SDK or Zod upgrade changes that
+ *     introspection again, schemas silently go empty and clients stop knowing
+ *     what to send. Nothing in the unit tests would fail.
  *   - a tool that no longer reaches its upstream endpoint (moved, renamed, or
  *     rejecting a parameter combination we still send).
  *   - annotations going missing, which would cost read-only tools their
