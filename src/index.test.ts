@@ -77,6 +77,10 @@ describe('Module imports', () => {
     expect(() => GeocodingParamsSchema.parse(invalidCountryCode)).toThrow(
       'Country code must be an ISO-3166-1 alpha2 code',
     );
+
+    // protobuf responses cannot be serialized as tool text
+    expect(() => GeocodingParamsSchema.parse({ name: 'Lyon', format: 'protobuf' })).toThrow();
+    expect(() => GeocodingParamsSchema.parse({ name: 'Lyon', format: 'json' })).not.toThrow();
   });
 
   it('should import tools successfully', () => {
