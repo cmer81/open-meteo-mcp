@@ -27,6 +27,18 @@ const VALID_MODELS = [
   'ukmo_seamless', // was uk_met_office_seamless
   'ukmo_global_deterministic_10km', // was uk_met_office_global_10km
   'ukmo_uk_deterministic_2km', // was uk_met_office_uk_2km
+  // Added 2026-09-21, verified against the live API
+  'ecmwf_aifs025',
+  'ecmwf_ifs_europe_ensemble_mean',
+  'ncep_hrrr_conus_15min',
+  'ncep_aigefs025_ensemble_mean',
+  'dwd_icon_d2_15min',
+  'meteofrance_arome_france_15min',
+  'meteofrance_arpege_world025',
+  'jma_msm_upper_level',
+  'chmi_aladin_seamless',
+  'chmi_aladin_cz_1km',
+  'chmi_aladin_central_europe_2km',
 ] as const;
 
 const INVALID_OLD_MODELS = [

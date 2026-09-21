@@ -433,20 +433,26 @@ export const ForecastModelsSchema = z
     'ecmwf_ifs04',
     'ecmwf_ifs',
     'ecmwf_ifs025',
+    'ecmwf_aifs025',
     'ecmwf_aifs025_single',
+    'ecmwf_ifs_europe_ensemble_mean',
+    'ecmwf_aifs_europe_ensemble_mean',
     'cma_grapes_global',
     'bom_access_global',
     'gfs_seamless',
     'ncep_gfs_seamless',
     'ncep_gfs_global',
     'ncep_hrrr_conus',
+    'ncep_hrrr_conus_15min',
     'ncep_nbm_conus',
     'ncep_nam_conus',
     'ncep_gfs_graphcast025',
     'ncep_aigfs025',
     'ncep_hgefs025_ensemble_mean',
+    'ncep_aigefs025_ensemble_mean',
     'jma_seamless',
     'jma_msm',
+    'jma_msm_upper_level',
     'jma_gsm',
     'kma_seamless',
     'kma_ldps',
@@ -455,6 +461,7 @@ export const ForecastModelsSchema = z
     'dwd_icon_global',
     'dwd_icon_eu',
     'dwd_icon_d2',
+    'dwd_icon_d2_15min',
     'icon_seamless',
     'icon_global',
     'icon_eu',
@@ -473,7 +480,11 @@ export const ForecastModelsSchema = z
     'meteofrance_arpege_world',
     'meteofrance_arpege_europe',
     'meteofrance_arome_france',
+    'meteofrance_arome_france0025',
     'meteofrance_arome_france_hd',
+    'meteofrance_arome_france_15min',
+    'meteofrance_arome_france_hd_15min',
+    'meteofrance_arpege_world025',
     'italia_meteo_arpae_icon_2i',
     'metno_seamless',
     'metno_nordic',
@@ -490,31 +501,67 @@ export const ForecastModelsSchema = z
     'meteoswiss_icon_ch2',
     'geosphere_seamless',
     'geosphere_arome_austria',
+    'chmi_aladin_seamless',
+    'chmi_aladin_cz_1km',
+    'chmi_aladin_central_europe_2km',
   ])
   .optional();
 
 // Valid model IDs for the dedicated /v1/ecmwf endpoint (different from /v1/forecast)
 export const EcmwfModelsSchema = z.enum(['ecmwf_ifs', 'ecmwf_ifs025', 'best_match']).optional();
 
-// Note: the ensemble.yml OpenAPI spec documents dwd_*_eps / cmc_gem_geps names, but
-// the live /v1/ensemble API rejects them (verified) and only accepts the names below.
+// Model IDs verified against the live /v1/ensemble endpoint. Both the short
+// (icon_*_eps, gem_global) and the canonical provider-prefixed names
+// (dwd_icon_*_eps, cmc_gem_geps) resolve; Open-Meteo keeps them as aliases.
+// The *_ensemble_mean entries return a single averaged series instead of one
+// series per member.
 const EnsembleModelEnum = z.enum([
   'icon_seamless_eps',
   'icon_global_eps',
   'icon_eu_eps',
   'icon_d2_eps',
+  'dwd_icon_seamless_eps',
+  'dwd_icon_global_eps',
+  'dwd_icon_eu_eps',
+  'dwd_icon_d2_eps',
   'gfs_seamless',
+  'ncep_gefs_seamless',
   'ncep_gefs025',
   'ncep_gefs05',
   'ncep_aigefs025',
   'ecmwf_ifs025_ensemble',
   'ecmwf_aifs025_ensemble',
+  'ecmwf_ifs_europe_ensemble',
+  'ecmwf_aifs_europe_ensemble',
   'gem_global',
+  'gem_global_ensemble',
+  'cmc_gem_geps',
   'bom_access_global',
+  'bom_access_global_ensemble',
+  'google_weathernext2_ensemble',
   'ukmo_global_ensemble_20km',
   'ukmo_uk_ensemble_2km',
   'meteoswiss_icon_ch1',
   'meteoswiss_icon_ch2',
+  'meteoswiss_icon_ch1_ensemble',
+  'meteoswiss_icon_ch2_ensemble',
+  'dwd_icon_eps_ensemble_mean_seamless',
+  'dwd_icon_eps_ensemble_mean',
+  'dwd_icon_eu_eps_ensemble_mean',
+  'dwd_icon_d2_eps_ensemble_mean',
+  'ncep_gefs_ensemble_mean_seamless',
+  'ncep_gefs025_ensemble_mean',
+  'ncep_gefs05_ensemble_mean',
+  'ncep_aigefs025_ensemble_mean',
+  'ecmwf_ifs025_ensemble_mean',
+  'ecmwf_aifs025_ensemble_mean',
+  'cmc_gem_geps_ensemble_mean',
+  'bom_access_global_ensemble_mean',
+  'google_weathernext2_ensemble_mean',
+  'ukmo_global_ensemble_mean_20km',
+  'ukmo_uk_ensemble_mean_2km',
+  'meteoswiss_icon_ch1_ensemble_mean',
+  'meteoswiss_icon_ch2_ensemble_mean',
 ]);
 
 // The live /v1/ensemble API accepts a comma-separated list of models (verified),
@@ -562,6 +609,7 @@ export const DwdIconModelsSchema = z
     'dwd_icon_global',
     'dwd_icon_eu',
     'dwd_icon_d2',
+    'dwd_icon_d2_15min',
     'icon_seamless',
     'icon_global',
     'icon_eu',
@@ -575,11 +623,13 @@ export const GfsModelsSchema = z
     'ncep_gfs_seamless',
     'ncep_gfs_global',
     'ncep_hrrr_conus',
+    'ncep_hrrr_conus_15min',
     'ncep_nbm_conus',
     'ncep_nam_conus',
     'ncep_gfs_graphcast025',
     'ncep_aigfs025',
     'ncep_hgefs025_ensemble_mean',
+    'ncep_aigefs025_ensemble_mean',
   ])
   .optional();
 
@@ -589,11 +639,17 @@ export const MeteoFranceModelsSchema = z
     'meteofrance_arpege_world',
     'meteofrance_arpege_europe',
     'meteofrance_arome_france',
+    'meteofrance_arome_france0025',
     'meteofrance_arome_france_hd',
+    'meteofrance_arome_france_15min',
+    'meteofrance_arome_france_hd_15min',
+    'meteofrance_arpege_world025',
   ])
   .optional();
 
-export const JmaModelsSchema = z.enum(['jma_seamless', 'jma_msm', 'jma_gsm']).optional();
+export const JmaModelsSchema = z
+  .enum(['jma_seamless', 'jma_msm', 'jma_msm_upper_level', 'jma_gsm'])
+  .optional();
 
 export const MetnoModelsSchema = z.enum(['metno_seamless', 'metno_nordic']).optional();
 
@@ -916,13 +972,23 @@ export const MarineMinutelyVariablesSchema = z
   .array(z.enum(['ocean_current_velocity', 'ocean_current_direction', 'sea_level_height_msl']))
   .optional();
 
+// Model IDs verified against the live /v1/marine endpoint.
 export const MarineModelsSchema = z
   .enum([
     'best_match',
     'meteofrance_wave',
+    'meteofrance_currents',
     'dwd_ewam',
+    'dwd_gwam',
+    'ewam',
+    'gwam',
     'ecmwf_wam',
+    'ecmwf_wam025',
+    'ecmwf_wam025_ensemble',
+    'ecmwf_wam025_ensemble_mean',
     'ncep_gfswave025',
+    'ncep_gefswave025',
+    'ncep_gefswave025_ensemble_mean',
     'era5_ocean',
   ])
   .optional();
