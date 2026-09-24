@@ -141,6 +141,15 @@ describe('Fix 5: EnsembleModelsSchema correct API model names', () => {
     'ecmwf_aifs025_ensemble',
     'ukmo_global_ensemble_20km',
     'ukmo_uk_ensemble_2km',
+    // Added 2026-09-21, verified against the live /v1/ensemble API
+    'dwd_icon_seamless_eps',
+    'dwd_icon_d2_eps',
+    'cmc_gem_geps',
+    'google_weathernext2_ensemble',
+    'meteoswiss_icon_ch1_ensemble',
+    'ecmwf_aifs_europe_ensemble',
+    'ncep_gefs_seamless',
+    'ecmwf_ifs025_ensemble_mean',
   ];
 
   const invalidOldModels = [
