@@ -72,7 +72,9 @@ export const GeocodingParamsSchema = z
       .string()
       .regex(/^[A-Z]{2}$/, 'Country code must be an ISO-3166-1 alpha2 code (e.g. FR, DE, US)')
       .optional(),
-    format: z.enum(['json', 'protobuf']).default('json').optional(),
+    // The upstream API also offers protobuf, but tool responses are serialized as
+    // JSON text, so only json can be forwarded.
+    format: z.enum(['json']).default('json').optional(),
   })
   .strict();
 
