@@ -16,7 +16,6 @@ import {
   createAuthMiddleware,
   createOriginValidator,
   createRateLimiter,
-  generateSessionId,
   getClientIp,
   sanitizeErrorMessage,
 } from './security.js';
@@ -95,14 +94,6 @@ function log(
 
 export class OpenMeteoMCPServer {
   private client: OpenMeteoClient;
-  private sessionServers: Map<
-    string,
-    { server: McpServer; transport: StreamableHTTPServerTransport; lastActivity: number }
-  > = new Map();
-
-  private static readonly SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour idle timeout
-  private static readonly MAX_SESSIONS = 100;
-  private static readonly CLEANUP_INTERVAL_MS = 5 * 60 * 1000; // run cleanup every 5 minutes
 
   constructor() {
     const baseURL = process.env.OPEN_METEO_API_URL || 'https://api.open-meteo.com';
@@ -299,31 +290,6 @@ export class OpenMeteoMCPServer {
     return server;
   }
 
-  private getSession(
-    sessionId: string,
-  ): { server: McpServer; transport: StreamableHTTPServerTransport } | undefined {
-    const session = this.sessionServers.get(sessionId);
-    if (session) {
-      session.lastActivity = Date.now();
-    }
-    return session;
-  }
-
-  private startCleanupTimer(): void {
-    const timer = setInterval(() => {
-      const now = Date.now();
-      for (const [id, session] of this.sessionServers) {
-        if (now - session.lastActivity > OpenMeteoMCPServer.SESSION_TTL_MS) {
-          session.server.close().catch(() => {});
-          this.sessionServers.delete(id);
-          log('info', 'session_expired', { session_id: id.substring(0, 8) });
-        }
-      }
-    }, OpenMeteoMCPServer.CLEANUP_INTERVAL_MS);
-    // Don't keep the process alive just for cleanup
-    timer.unref();
-  }
-
   private buildExpressApp(): express.Application {
     const app = express();
     app.use(express.json());
@@ -343,224 +309,66 @@ export class OpenMeteoMCPServer {
     app.use(createRateLimiter());
     app.use(createAuthMiddleware());
 
-    // GET /mcp — SSE streaming for server-to-client notifications
-    app.get('/mcp', async (req, res) => {
-      const remoteIp = getClientIp(req);
-      const userAgent = req.headers['user-agent'] ?? 'unknown';
-
-      try {
-        const sessionId = req.headers['mcp-session-id'] as string | undefined;
-
-        log('info', 'http_request', {
-          method: 'GET',
-          session_id: sessionId ? sessionId.substring(0, 8) : null,
-          remote_ip: remoteIp,
-          user_agent: userAgent,
+    // The HTTP transport is stateless: every POST gets a fresh McpServer and
+    // transport, torn down when the response closes. No tool keeps state between
+    // calls, so sessions bought nothing, and the session map was an exhaustion
+    // target: one client could open the 100 allowed sessions and lock everyone
+    // else out for an hour. A per-IP cap would not have fixed it either, since
+    // every claude.ai user reaches the server from Anthropic's shared egress IPs.
+    // Creating a server costs ~0.2 ms.
+    //
+    // Without sessions there is no server-to-client stream to open (GET) or
+    // session to terminate (DELETE); the spec has stateless servers answer 405.
+    const methodNotAllowed = (req: express.Request, res: express.Response) => {
+      log('info', 'http_request', {
+        method: req.method,
+        remote_ip: getClientIp(req),
+        user_agent: req.headers['user-agent'] ?? 'unknown',
+      });
+      res
+        .status(405)
+        .set('Allow', 'POST')
+        .json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32000,
+            message: 'Method not allowed: this server is stateless, use POST',
+          },
+          id: null,
         });
-
-        if (!sessionId) {
-          res.status(400).json({
-            jsonrpc: '2.0',
-            error: { code: -32600, message: 'Invalid Request: Session ID required' },
-            id: null,
-          });
-          return;
-        }
-
-        const session = this.getSession(sessionId);
-        if (!session) {
-          log('warn', 'session_not_found', {
-            session_id: sessionId.substring(0, 8),
-            remote_ip: remoteIp,
-          });
-          res.status(404).json({
-            jsonrpc: '2.0',
-            error: { code: -32600, message: 'Session not found' },
-            id: null,
-          });
-          return;
-        }
-
-        await session.transport.handleRequest(req, res);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        log('error', 'request_error', { error: errorMessage, remote_ip: remoteIp });
-        if (!res.headersSent) {
-          res.status(500).json({
-            jsonrpc: '2.0',
-            error: { code: -32603, message: sanitizeErrorMessage(err) },
-            id: null,
-          });
-        }
-      }
-    });
-
-    // DELETE /mcp — session termination
-    app.delete('/mcp', async (req, res) => {
-      const remoteIp = getClientIp(req);
-      const userAgent = req.headers['user-agent'] ?? 'unknown';
-
-      try {
-        const sessionId = req.headers['mcp-session-id'] as string | undefined;
-
-        log('info', 'http_request', {
-          method: 'DELETE',
-          session_id: sessionId ? sessionId.substring(0, 8) : null,
-          remote_ip: remoteIp,
-          user_agent: userAgent,
-        });
-
-        if (!sessionId) {
-          res.status(400).json({
-            jsonrpc: '2.0',
-            error: { code: -32600, message: 'Invalid Request: Session ID required' },
-            id: null,
-          });
-          return;
-        }
-
-        // Use direct map access — lastActivity is irrelevant for a session about to be destroyed
-        const session = this.sessionServers.get(sessionId);
-        if (!session) {
-          log('warn', 'session_not_found', {
-            session_id: sessionId.substring(0, 8),
-            remote_ip: remoteIp,
-          });
-          res.status(404).json({
-            jsonrpc: '2.0',
-            error: { code: -32600, message: 'Session not found' },
-            id: null,
-          });
-          return;
-        }
-
-        await session.transport.close();
-        res.status(200).json({ message: 'Session terminated' });
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        log('error', 'request_error', { error: errorMessage, remote_ip: remoteIp });
-        if (!res.headersSent) {
-          res.status(500).json({
-            jsonrpc: '2.0',
-            error: { code: -32603, message: sanitizeErrorMessage(err) },
-            id: null,
-          });
-        }
-      }
-    });
+    };
+    app.get('/mcp', methodNotAllowed);
+    app.delete('/mcp', methodNotAllowed);
 
     app.post('/mcp', async (req, res) => {
       const remoteIp = getClientIp(req);
-      const userAgent = req.headers['user-agent'] ?? 'unknown';
+      log('info', 'http_request', {
+        method: req.body?.method || 'unknown',
+        remote_ip: remoteIp,
+        user_agent: req.headers['user-agent'] ?? 'unknown',
+      });
+
+      const mcpServer = this.createServer();
+      // No sessionIdGenerator: the transport runs stateless and issues no session ID.
+      const transport = new StreamableHTTPServerTransport({ enableJsonResponse: true });
+      res.on('close', () => {
+        transport.close().catch(() => {});
+        mcpServer.close().catch(() => {});
+      });
 
       try {
-        const method = req.body?.method || 'unknown';
-
-        // Extract session ID from headers (Express normalises headers to lowercase)
-        const sessionId = req.headers['mcp-session-id'] as string | undefined;
-
-        log('info', 'http_request', {
-          method,
-          session_id: sessionId ? sessionId.substring(0, 8) : null,
-          remote_ip: remoteIp,
-          user_agent: userAgent,
-        });
-
-        // If no session ID and it's an initialize request, create a new session
-        if (!sessionId && req.body?.method === 'initialize') {
-          if (this.sessionServers.size >= OpenMeteoMCPServer.MAX_SESSIONS) {
-            log('warn', 'session_limit_reached', {
-              current: this.sessionServers.size,
-              max: OpenMeteoMCPServer.MAX_SESSIONS,
-              remote_ip: remoteIp,
-            });
-            res.status(503).json({
-              jsonrpc: '2.0',
-              error: { code: -32603, message: 'Server at session capacity, try again later' },
-              id: req.body?.id || null,
-            });
-            return;
-          }
-
-          // Generate a new session ID
-          const newSessionId = generateSessionId();
-          log('info', 'session_created', { session_id: newSessionId.substring(0, 8) });
-
-          // Create server and transport for this new session
-          const mcpServer = this.createServer();
-          const transport = new StreamableHTTPServerTransport({
-            enableJsonResponse: true,
-            sessionIdGenerator: () => newSessionId,
-          });
-
-          mcpServer.server.oninitialized = () => {
-            log('info', 'session_initialized', { session_id: newSessionId.substring(0, 8) });
-          };
-
-          mcpServer.server.onclose = () => {
-            this.sessionServers.delete(newSessionId);
-            log('info', 'session_closed', { session_id: newSessionId.substring(0, 8) });
-          };
-
-          await mcpServer.connect(transport as Transport);
-
-          this.sessionServers.set(newSessionId, {
-            server: mcpServer,
-            transport,
-            lastActivity: Date.now(),
-          });
-
-          // Set session ID in response header before handling request
-          res.setHeader('mcp-session-id', newSessionId);
-
-          // Handle the initialize request
-          await transport.handleRequest(req, res, req.body);
-          return;
-        }
-
-        if (sessionId) {
-          const session = this.getSession(sessionId);
-          if (!session) {
-            log('warn', 'session_not_found', {
-              session_id: sessionId.substring(0, 8),
-              remote_ip: remoteIp,
-            });
-            res.status(404).json({
-              jsonrpc: '2.0',
-              error: { code: -32600, message: 'Session not found' },
-              id: req.body?.id || null,
-            });
-            return;
-          }
-          const { transport } = session;
-          await transport.handleRequest(req, res, req.body);
-        } else {
-          // No session ID and not an initialize request - error
-          log('warn', 'invalid_request', {
-            reason: 'missing_session_id',
-            method,
-            remote_ip: remoteIp,
-          });
-          res.status(400).json({
-            jsonrpc: '2.0',
-            error: {
-              code: -32600,
-              message: 'Invalid Request: Session ID required for non-initialize requests',
-            },
-            id: req.body?.id || null,
-          });
-        }
+        await mcpServer.connect(transport as Transport);
+        await transport.handleRequest(req, res, req.body);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         log('error', 'request_error', { error: errorMessage, remote_ip: remoteIp });
-        res.status(500).json({
-          jsonrpc: '2.0',
-          error: {
-            code: -32603,
-            message: sanitizeErrorMessage(err),
-          },
-          id: req.body?.id || null,
-        });
+        if (!res.headersSent) {
+          res.status(500).json({
+            jsonrpc: '2.0',
+            error: { code: -32603, message: sanitizeErrorMessage(err) },
+            id: req.body?.id ?? null,
+          });
+        }
       }
     });
 
@@ -588,7 +396,6 @@ export class OpenMeteoMCPServer {
     const transport = process.env.TRANSPORT || 'stdio';
 
     if (transport === 'http') {
-      this.startCleanupTimer();
       this.startHttpTransport();
     } else {
       // For stdio mode, create a single server instance
