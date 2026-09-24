@@ -146,121 +146,121 @@ export class OpenMeteoClient {
     return result;
   }
 
-  async getForecast(params: ForecastParams): Promise<WeatherResponse> {
+  async getForecast(params: ForecastParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.client
-      .get('/v1/forecast', { params: this.buildParams(params) })
+      .get('/v1/forecast', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getArchive(params: ArchiveParams): Promise<WeatherResponse> {
+  async getArchive(params: ArchiveParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.archiveClient
-      .get('/v1/archive', { params: this.buildParams(params) })
+      .get('/v1/archive', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getDwdIcon(params: DwdIconParams): Promise<WeatherResponse> {
+  async getDwdIcon(params: DwdIconParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.client
-      .get('/v1/dwd-icon', { params: this.buildParams(params) })
+      .get('/v1/dwd-icon', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getGfs(params: GfsParams): Promise<WeatherResponse> {
+  async getGfs(params: GfsParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.client
-      .get('/v1/gfs', { params: this.buildParams(params) })
+      .get('/v1/gfs', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getMeteoFrance(params: MeteoFranceParams): Promise<WeatherResponse> {
+  async getMeteoFrance(params: MeteoFranceParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.client
-      .get('/v1/meteofrance', { params: this.buildParams(params) })
+      .get('/v1/meteofrance', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getEcmwf(params: EcmwfParams): Promise<WeatherResponse> {
+  async getEcmwf(params: EcmwfParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.client
-      .get('/v1/ecmwf', { params: this.buildParams(params) })
+      .get('/v1/ecmwf', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getJma(params: JmaParams): Promise<WeatherResponse> {
+  async getJma(params: JmaParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.client
-      .get('/v1/jma', { params: this.buildParams(params) })
+      .get('/v1/jma', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getMetno(params: MetnoParams): Promise<WeatherResponse> {
+  async getMetno(params: MetnoParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.client
-      .get('/v1/metno', { params: this.buildParams(params) })
+      .get('/v1/metno', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getGem(params: GemParams): Promise<WeatherResponse> {
+  async getGem(params: GemParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.client
-      .get('/v1/gem', { params: this.buildParams(params) })
+      .get('/v1/gem', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getAirQuality(params: AirQualityParams): Promise<WeatherResponse> {
+  async getAirQuality(params: AirQualityParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.airQualityClient
-      .get('/v1/air-quality', { params: this.buildParams(params) })
+      .get('/v1/air-quality', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getMarine(params: MarineParams): Promise<WeatherResponse> {
+  async getMarine(params: MarineParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.marineClient
-      .get('/v1/marine', { params: this.buildParams(params) })
+      .get('/v1/marine', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getEnsemble(params: EnsembleParams): Promise<WeatherResponse> {
+  async getEnsemble(params: EnsembleParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.ensembleClient
-      .get('/v1/ensemble', { params: this.buildParams(params) })
+      .get('/v1/ensemble', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getElevation(params: ElevationParams): Promise<ElevationResponse> {
+  async getElevation(params: ElevationParams, signal?: AbortSignal): Promise<ElevationResponse> {
     const response = await this.client
-      .get('/v1/elevation', { params: this.buildParams(params) })
+      .get('/v1/elevation', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getFlood(params: FloodParams): Promise<WeatherResponse> {
+  async getFlood(params: FloodParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.floodClient
-      .get('/v1/flood', { params: this.buildParams(params) })
+      .get('/v1/flood', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getSeasonal(params: SeasonalParams): Promise<WeatherResponse> {
+  async getSeasonal(params: SeasonalParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.seasonalClient
-      .get('/v1/seasonal', { params: this.buildParams(params) })
+      .get('/v1/seasonal', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getClimate(params: ClimateParams): Promise<WeatherResponse> {
+  async getClimate(params: ClimateParams, signal?: AbortSignal): Promise<WeatherResponse> {
     const response = await this.climateClient
-      .get('/v1/climate', { params: this.buildParams(params) })
+      .get('/v1/climate', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
 
-  async getGeocoding(params: GeocodingParams): Promise<GeocodingResponse> {
+  async getGeocoding(params: GeocodingParams, signal?: AbortSignal): Promise<GeocodingResponse> {
     const response = await this.geocodingClient
-      .get('/v1/search', { params: this.buildParams(params) })
+      .get('/v1/search', { params: this.buildParams(params), ...(signal && { signal }) })
       .catch(OpenMeteoClient.mapHttpError);
     return response.data;
   }
