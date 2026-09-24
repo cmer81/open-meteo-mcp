@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { z } from 'zod';
 import {
   ArchiveParamsSchema,
   ClimateParamsSchema,
@@ -213,5 +214,90 @@ describe('Fix 4: current array parameter in weather_forecast', () => {
       current_weather: true,
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('Fix 6: pressure-level variables published as a pattern, not ~130 enum members', () => {
+  const base = { latitude: 48.8566, longitude: 2.3522 };
+  const levels = [
+    '1000',
+    '975',
+    '950',
+    '925',
+    '900',
+    '850',
+    '800',
+    '700',
+    '600',
+    '500',
+    '400',
+    '300',
+    '250',
+    '200',
+    '150',
+    '100',
+    '70',
+    '50',
+    '30',
+  ];
+  const ensembleBases = [
+    'temperature',
+    'relative_humidity',
+    'wind_speed',
+    'wind_direction',
+    'geopotential_height',
+    'vertical_velocity',
+  ];
+  // The forecast endpoints additionally serve cloud cover per pressure level.
+  const forecastBases = [...ensembleBases, 'cloud_cover'];
+  const combos = (bases: string[]) => bases.flatMap((b) => levels.map((l) => `${b}_${l}hPa`));
+
+  it('accepts every forecast pressure-level combination in hourly and current', () => {
+    const vars = combos(forecastBases);
+    expect(vars).toHaveLength(133);
+    expect(ForecastParamsSchema.safeParse({ ...base, hourly: vars, current: vars }).success).toBe(
+      true,
+    );
+  });
+
+  it('accepts every ensemble pressure-level combination', () => {
+    const vars = combos(ensembleBases);
+    expect(vars).toHaveLength(114);
+    expect(EnsembleParamsSchema.safeParse({ ...base, hourly: vars }).success).toBe(true);
+  });
+
+  it.each([
+    'temperature_851hPa',
+    'temperature_10hPa',
+    'temperature_850hpa',
+    'dew_point_850hPa',
+    'temperature__850hPa',
+  ])('rejects malformed or unknown pressure-level variable %s', (variable) => {
+    expect(ForecastParamsSchema.safeParse({ ...base, hourly: [variable] }).success).toBe(false);
+  });
+
+  it('rejects cloud_cover pressure levels for ensemble, which the endpoint does not serve', () => {
+    const result = EnsembleParamsSchema.safeParse({ ...base, hourly: ['cloud_cover_850hPa'] });
+    expect(result.success).toBe(false);
+  });
+
+  it('still accepts surface variables alongside pressure-level ones', () => {
+    const result = ForecastParamsSchema.safeParse({
+      ...base,
+      hourly: ['temperature_2m', 'temperature_850hPa'],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('explains the accepted naming when a variable is unknown', () => {
+    const result = ForecastParamsSchema.safeParse({ ...base, hourly: ['temprature_2m'] });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toContain('<variable>_<level>hPa');
+  });
+
+  it('publishes pressure levels as a regex pattern instead of enumerating them', () => {
+    const json = JSON.stringify(z.toJSONSchema(ForecastParamsSchema, { io: 'input' }));
+    expect(json).not.toContain('temperature_850hPa"');
+    expect(json).toContain('hPa$');
   });
 });

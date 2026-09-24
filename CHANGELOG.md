@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [Unreleased]
+
+### Changed
+
+- **Published tool schemas are ~35% smaller** (`tools/list` from ~155,600 to
+  ~101,800 characters), which cuts the context every conversation spends on
+  this server before its first message. Accepted inputs are unchanged.
+  - The 133 forecast pressure-level variables (7 variables × 19 levels, e.g.
+    `temperature_850hPa`) and the 114 ensemble ones are published as a single
+    regex `pattern` instead of one enum member each. They were listed twice
+    per forecast tool (`hourly` and `current`), across 8 tools.
+  - Descriptions repeated across tools (`cell_selection`, `tilt`, `azimuth`,
+    `start_hour`/`end_hour`, `past_*`/`forecast_*`) are shorter, with the same
+    information.
+- **An unknown `hourly`/`current` variable now gets an actionable error**
+  explaining the `<variable>_<level>hPa` naming, instead of `Invalid input`.
+
 ## [2.2.0] - 2026-09-24
 
 Model enums refreshed against the live API, and upstream responses are now
@@ -218,6 +235,7 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[Unreleased]: https://github.com/cmer81/open-meteo-mcp/compare/v2.2.0...HEAD
 [2.2.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.0.2...v2.1.0
 [2.0.2]: https://github.com/cmer81/open-meteo-mcp/compare/v2.0.1...v2.0.2
