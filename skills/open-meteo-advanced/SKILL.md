@@ -59,7 +59,7 @@ All share the same parameters as `weather_forecast` (see `open-meteo` skill), pl
 
 | Tool | Example model keys |
 |------|--------------------|
-| `ecmwf_forecast` | `ecmwf_ifs`, `ecmwf_ifs025`, `best_match` (only these 3 are valid) |
+| `ecmwf_forecast` | `ecmwf_ifs`, `ecmwf_ifs04`, `ecmwf_ifs025`, `ecmwf_aifs025`, `ecmwf_aifs025_single`, `ecmwf_ifs_europe_ensemble_mean`, `ecmwf_aifs_europe_ensemble_mean`, `best_match` |
 | `dwd_icon_forecast` | `dwd_icon_seamless`, `dwd_icon_global`, `dwd_icon_eu`, `dwd_icon_d2` |
 | `gfs_forecast` | `ncep_gfs_global`, `ncep_gfs_seamless`, `ncep_hrrr_conus` |
 | `meteofrance_forecast` | `meteofrance_seamless`, `meteofrance_arome_france`, `meteofrance_arpege_europe` |
@@ -67,7 +67,7 @@ All share the same parameters as `weather_forecast` (see `open-meteo` skill), pl
 | `metno_forecast` | `metno_nordic`, `metno_seamless` |
 | `gem_forecast` | `gem_global`, `gem_regional`, `gem_seamless` |
 
-**ECMWF warning:** `ecmwf_ifs_025`, `ecmwf_ifs_hres_9km`, and `ecmwf_aifs_025_single` are NOT valid on `ecmwf_forecast` and will return HTTP 400.
+**ECMWF warning:** model IDs with an underscore before the resolution digits (`ecmwf_ifs_025`, `ecmwf_aifs_025_single`) and `ecmwf_ifs_hres_9km` are NOT valid on `ecmwf_forecast`. Use `ecmwf_ifs025` / `ecmwf_aifs025_single` / `ecmwf_ifs`.
 
 ### `ensemble_forecast`
 
@@ -153,7 +153,7 @@ Output represents **ensemble anomalies relative to climatology**, not absolute f
 ## Best Practices
 
 - **Don't use regional model tools outside their geographic coverage** — `dwd_icon_forecast` for Asia will return empty or incorrect data.
-- **`ecmwf_forecast` accepts only 3 model IDs** — `ecmwf_ifs`, `ecmwf_ifs025`, or `best_match`. Any other ECMWF key causes HTTP 400.
+- **`ecmwf_forecast` accepts only the ECMWF model IDs listed above** (IFS, AIFS and the Europe ensemble means). Any other key causes HTTP 400.
 - **Ensemble output is member arrays, not scalar values** — process all `_memberNN` keys to derive uncertainty ranges.
 - **Climate data before the current year is CMIP6 simulation**, not observed data — use `weather_archive` for real historical measurements.
 - **`seasonal_forecast` outputs anomalies**, not absolute values — it answers "warmer than usual?" not "what temperature exactly?".

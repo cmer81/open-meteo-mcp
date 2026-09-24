@@ -126,7 +126,7 @@ export const ECMWF_FORECAST_TOOL: ToolDefinition = {
   title: 'ECMWF Forecast',
   annotations: READ_ONLY_ANNOTATIONS,
   description:
-    'Get weather forecast from ECMWF models via the dedicated /v1/ecmwf endpoint. IMPORTANT: Specify exactly one model in the `models` parameter — only one model per request is supported. Valid model IDs for this endpoint are: "ecmwf_ifs" (IFS HRES, high-resolution), "ecmwf_ifs025" (IFS open-data at 0.25°), "best_match". Note: "ecmwf_ifs_025", "ecmwf_ifs_hres_9km", and "ecmwf_aifs_025_single" are NOT valid on this endpoint and will return 400. For multi-model comparison, make one parallel tool call per model using the appropriate provider-specific tool.',
+    'Get weather forecast from ECMWF models via the dedicated /v1/ecmwf endpoint. IMPORTANT: Specify exactly one model in the `models` parameter — only one model per request is supported. Valid model IDs: "ecmwf_ifs" (IFS HRES 9 km), "ecmwf_ifs04" (IFS open-data 0.4°), "ecmwf_ifs025" (IFS open-data 0.25°, the default), "ecmwf_aifs025" and "ecmwf_aifs025_single" (AIFS machine-learning model, ensemble mean and single run), "ecmwf_ifs_europe_ensemble_mean" and "ecmwf_aifs_europe_ensemble_mean" (Europe-only ensemble means), "best_match". Model IDs with an underscore before the resolution digits (e.g. "ecmwf_ifs_025") are not valid. For multi-model comparison, make one parallel tool call per model using the appropriate provider-specific tool.',
 };
 
 export const JMA_FORECAST_TOOL: ToolDefinition = {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ForecastParamsSchema } from './types.js';
+import { EcmwfParamsSchema, ForecastParamsSchema } from './types.js';
 
 // Canonical model names verified against the Open-Meteo API (/v1/forecast)
 // Wrong names produce: "Cannot initialize MultiDomains from invalid String value <name>"
@@ -80,4 +80,47 @@ describe('metno_forecast description — no models instruction', () => {
     });
     expect(result.success).toBe(true);
   });
+});
+
+// Model IDs verified against the live /v1/ecmwf endpoint on 2026-09-21
+describe('EcmwfModelsSchema — models accepted by /v1/ecmwf', () => {
+  const valid = [
+    'best_match',
+    'ecmwf_ifs',
+    'ecmwf_ifs04',
+    'ecmwf_ifs025',
+    'ecmwf_aifs025',
+    'ecmwf_aifs025_single',
+    'ecmwf_ifs_europe_ensemble_mean',
+    'ecmwf_aifs_europe_ensemble_mean',
+  ];
+
+  for (const model of valid) {
+    it(`EcmwfParamsSchema should accept model: ${model}`, () => {
+      const result = EcmwfParamsSchema.safeParse({
+        latitude: 48.8566,
+        longitude: 2.3522,
+        models: model,
+        hourly: ['temperature_2m'],
+      });
+      expect(result.success).toBe(true);
+    });
+  }
+
+  for (const model of [
+    'ecmwf_ifs_025',
+    'ecmwf_aifs_025_single',
+    'ecmwf_ifs_hres_9km',
+    'gfs_seamless',
+  ]) {
+    it(`EcmwfParamsSchema should reject model: ${model}`, () => {
+      const result = EcmwfParamsSchema.safeParse({
+        latitude: 48.8566,
+        longitude: 2.3522,
+        models: model,
+        hourly: ['temperature_2m'],
+      });
+      expect(result.success).toBe(false);
+    });
+  }
 });
