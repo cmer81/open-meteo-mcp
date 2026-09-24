@@ -512,7 +512,7 @@ npm run lint
 
 The `evals/` directory holds an LLM-usability benchmark for this server's tools — a different check than `npm test`. Unit tests verify the code is correct; this verifies that an LLM given *only* this server's tools (no other context) can actually complete realistic tasks with them.
 
-- `evals/evaluation.xml` — 10 independent, read-only question/answer pairs built on stable historical data (ERA5 archive, CMIP6 projections, geocoding, elevation), so the expected answers never change over time.
+- `evals/evaluation.xml` — 14 independent, read-only question/answer pairs built on stable historical data (ERA5 archive, CMIP6 projections, geocoding, elevation), so the expected answers never change over time. The first 10 name the tool to use; the last 4 do not, so they also check tool choice and local-time handling (what the server instructions steer).
 - `evals/scripts/evaluation.py` — harness that launches the server, lets an agent answer each question using only its tools, and compares the answer against the expected one.
 
 ### Running the evaluation
