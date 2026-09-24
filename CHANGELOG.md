@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [Unreleased]
+
+### Added
+
+- **Server instructions.** The server now sends `instructions` at initialize,
+  which MCP clients place in the model's system prompt. They say which of the
+  17 tools answers which question (`weather_forecast` by default, the
+  model-specific tools only for a named model or a comparison, `past_days` vs
+  `weather_archive`, ensemble / seasonal / climate ranges), and the shared
+  conventions: GMT unless `timezone` is set (`"auto"` for local time), keep
+  requests narrow to avoid truncation, and `null` means no value, not zero.
+
 ## [2.2.1] - 2026-09-24
 
 ### Changed
@@ -235,6 +247,7 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[Unreleased]: https://github.com/cmer81/open-meteo-mcp/compare/v2.2.1...HEAD
 [2.2.1]: https://github.com/cmer81/open-meteo-mcp/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.0.2...v2.1.0
