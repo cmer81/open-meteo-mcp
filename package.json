@@ -29,12 +29,24 @@
   },
   "keywords": [
     "mcp",
-    "weather",
+    "mcp-server",
+    "model-context-protocol",
     "open-meteo",
-    "forecast",
-    "api"
+    "weather",
+    "weather-api",
+    "weather-forecast",
+    "meteorology",
+    "climate",
+    "historical-weather",
+    "air-quality",
+    "marine-weather",
+    "geocoding",
+    "ecmwf",
+    "llm",
+    "claude",
+    "ai"
   ],
-  "author": "Claude Code",
+  "author": "Cedric Mercier",
   "license": "MIT",
   "repository": {
     "type": "git",
