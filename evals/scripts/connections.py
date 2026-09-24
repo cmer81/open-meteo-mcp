@@ -16,6 +16,9 @@ class MCPConnection(ABC):
     def __init__(self):
         self.session = None
         self._stack = None
+        # Server `instructions` from the initialize result. Real MCP clients put
+        # them in the model's system prompt, so the harness does too.
+        self.instructions = None
 
     @abstractmethod
     def _create_context(self):
@@ -39,7 +42,8 @@ class MCPConnection(ABC):
 
             session_ctx = ClientSession(read, write)
             self.session = await self._stack.enter_async_context(session_ctx)
-            await self.session.initialize()
+            init_result = await self.session.initialize()
+            self.instructions = init_result.instructions
             return self
         except BaseException:
             await self._stack.__aexit__(None, None, None)
