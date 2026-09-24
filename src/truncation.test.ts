@@ -71,23 +71,34 @@ describe('truncateResponse', () => {
 });
 
 describe('serializeToolResponse', () => {
-  it('keeps the emitted text within the character limit, indentation included', () => {
+  it('keeps the emitted text within the character limit', () => {
     const large = { latitude: 48.85, longitude: 2.35, hourly: makeHourlySeries(20_000) };
 
     const text = serializeToolResponse(large);
 
-    // The budget applies to what is actually sent to the client, so the
-    // measurement has to account for the pretty-printing whitespace.
+    // The budget applies to the text actually sent to the client.
     expect(text.length).toBeLessThanOrEqual(CHARACTER_LIMIT);
     expect(JSON.parse(text).truncated).toBe(true);
   });
 
-  it('pretty-prints responses that fit without marking them truncated', () => {
+  it('fits more data under the limit than pretty-printed JSON would', () => {
+    const large = { latitude: 48.85, longitude: 2.35, hourly: makeHourlySeries(20_000) };
+    const kept = (JSON.parse(serializeToolResponse(large)).hourly.time as unknown[]).length;
+
+    // Pretty-printed, one array element per line, 25,000 characters held
+    // roughly half as many timestamps; compact output must keep clearly more.
+    const prettyBudget = Math.floor(
+      CHARACTER_LIMIT / (JSON.stringify(large, null, 2).length / large.hourly.time.length),
+    );
+    expect(kept).toBeGreaterThan(prettyBudget * 1.5);
+  });
+
+  it('emits compact JSON for responses that fit, without marking them truncated', () => {
     const small = { latitude: 48.85, longitude: 2.35, hourly: makeHourlySeries(5) };
 
     const text = serializeToolResponse(small);
 
-    expect(text).toBe(JSON.stringify(small, null, 2));
+    expect(text).toBe(JSON.stringify(small));
     expect(JSON.parse(text).truncated).toBeUndefined();
   });
 });
