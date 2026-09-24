@@ -68,10 +68,13 @@ class MCPConnection(ABC):
             for tool in response.tools
         ]
 
-    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-        """Call a tool on the MCP server with provided arguments."""
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> tuple[str, bool]:
+        """Call a tool on the MCP server; return its text content and whether it is an error."""
         result = await self.session.call_tool(tool_name, arguments=arguments)
-        return result.content
+        # result.content is a list of SDK content objects (TextContent, ...),
+        # which json.dumps cannot serialize; the model needs the text itself.
+        text = "\n".join(block.text for block in result.content if block.type == "text")
+        return text, bool(result.isError)
 
 
 class MCPConnectionStdio(MCPConnection):

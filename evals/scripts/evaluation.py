@@ -123,11 +123,11 @@ async def agent_loop(
 
             tool_start_ts = time.time()
             try:
-                tool_result = await connection.call_tool(tool_name, tool_use.input)
-                tool_response = json.dumps(tool_result) if isinstance(tool_result, (dict, list)) else str(tool_result)
+                tool_response, is_error = await connection.call_tool(tool_name, tool_use.input)
             except Exception as e:
                 tool_response = f"Error executing tool {tool_name}: {str(e)}\n"
                 tool_response += traceback.format_exc()
+                is_error = True
             tool_duration = time.time() - tool_start_ts
 
             if tool_name not in tool_metrics:
@@ -139,6 +139,7 @@ async def agent_loop(
                 "type": "tool_result",
                 "tool_use_id": tool_use.id,
                 "content": tool_response,
+                "is_error": is_error,
             })
 
         messages.append({"role": "user", "content": tool_results})
