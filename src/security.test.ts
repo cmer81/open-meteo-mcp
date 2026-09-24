@@ -1,10 +1,12 @@
-import type { NextFunction, Request, Response } from 'express';
+import express, { type NextFunction, type Request, type Response } from 'express';
+import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createAuthMiddleware,
   createRateLimiter,
   generateSessionId,
   getClientIp,
+  isAnthropicEgressIp,
 } from './security.js';
 
 // ---------------------------------------------------------------------------
@@ -256,5 +258,87 @@ describe('createRateLimiter', () => {
     process.env.RATE_LIMIT_RPM = 'not-a-number';
     // Should not throw
     expect(() => createRateLimiter()).not.toThrow();
+  });
+});
+
+describe('isAnthropicEgressIp', () => {
+  it.each(['160.79.104.0', '160.79.108.42', '160.79.111.255'])('matches %s', (ip) => {
+    expect(isAnthropicEgressIp(ip)).toBe(true);
+  });
+
+  it.each(['160.79.103.255', '160.79.112.0', '8.8.8.8', '2607:6bc0::1', 'unknown'])(
+    'does not match %s',
+    (ip) => {
+      expect(isAnthropicEgressIp(ip)).toBe(false);
+    },
+  );
+});
+
+describe('createRateLimiter tiers', () => {
+  // supertest connects from 127.0.0.1; trusting it lets each test pick the
+  // client IP through X-Forwarded-For.
+  const appFor = () => {
+    const app = express();
+    app.use(createRateLimiter());
+    app.get('/', (_req, res) => {
+      res.sendStatus(200);
+    });
+    return app;
+  };
+  const hit = (app: express.Application, ip: string) =>
+    supertest(app).get('/').set('X-Forwarded-For', ip);
+
+  beforeEach(() => {
+    process.env.TRUSTED_PROXIES = '127.0.0.1';
+    process.env.RATE_LIMIT_RPM = '2';
+    process.env.RATE_LIMIT_ANTHROPIC_RPM = '5';
+  });
+
+  afterEach(() => {
+    delete process.env.TRUSTED_PROXIES;
+    delete process.env.RATE_LIMIT_RPM;
+    delete process.env.RATE_LIMIT_ANTHROPIC_RPM;
+  });
+
+  it('gives each ordinary client its own RATE_LIMIT_RPM budget', async () => {
+    const app = appFor();
+    for (const ip of ['1.1.1.1', '1.1.1.1', '2.2.2.2', '2.2.2.2']) {
+      expect((await hit(app, ip)).status).toBe(200);
+    }
+    expect((await hit(app, '1.1.1.1')).status).toBe(429);
+  });
+
+  it('pools all Anthropic egress IPs under RATE_LIMIT_ANTHROPIC_RPM', async () => {
+    const app = appFor();
+    // Five requests from different claude.ai egress IPs: well past the per-IP
+    // limit of 2 for any one of them, within the shared pool of 5.
+    for (const ip of [
+      '160.79.104.1',
+      '160.79.105.2',
+      '160.79.106.3',
+      '160.79.107.4',
+      '160.79.104.1',
+    ]) {
+      expect((await hit(app, ip)).status).toBe(200);
+    }
+    expect((await hit(app, '160.79.110.9')).status).toBe(429);
+    // The pool is separate from ordinary clients.
+    expect((await hit(app, '3.3.3.3')).status).toBe(200);
+  });
+
+  it('groups IPv6 clients by /56 so rotating addresses does not reset the limit', async () => {
+    const app = appFor();
+    expect((await hit(app, '2001:db8:1:1::1')).status).toBe(200);
+    expect((await hit(app, '2001:db8:1:2::2')).status).toBe(200);
+    expect((await hit(app, '2001:db8:1:3::3')).status).toBe(429);
+  });
+
+  it('does not let a direct client claim the Anthropic tier through X-Forwarded-For', async () => {
+    delete process.env.TRUSTED_PROXIES;
+    const app = appFor();
+    // Header ignored: every request counts as 127.0.0.1, on the per-IP limit.
+    expect((await hit(app, '160.79.104.1')).status).toBe(200);
+    expect((await hit(app, '160.79.104.2')).status).toBe(200);
+    expect((await hit(app, '160.79.104.3')).status).toBe(429);
   });
 });

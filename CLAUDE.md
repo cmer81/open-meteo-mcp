@@ -152,7 +152,8 @@ Transport configuration:
 
 HTTP transport security (all optional, HTTP mode only):
 - `API_KEY` - When set, every `/mcp` request needs `Authorization: Bearer <key>` or `X-API-Key`. Unset = open mode.
-- `RATE_LIMIT_RPM` - Requests per minute per client IP (default: 60)
+- `RATE_LIMIT_RPM` - Requests per minute per client IP (default: 60); IPv6 clients are grouped by /56
+- `RATE_LIMIT_ANTHROPIC_RPM` - Requests per minute shared by all traffic from Anthropic's outbound range `160.79.104.0/21`, i.e. every claude.ai user together (default: 600)
 - `TRUSTED_PROXIES` - Comma-separated IPs/CIDRs whose `X-Forwarded-For` is trusted. Unset = header ignored.
 - `ALLOWED_ORIGINS` - Comma-separated browser origins allowed (DNS rebinding protection). Empty by default: any request carrying an `Origin` header is rejected with 403. Requests without one are unaffected.
 

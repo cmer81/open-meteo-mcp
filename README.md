@@ -306,7 +306,8 @@ All environment variables are optional and have sensible defaults:
 #### HTTP Transport Security (optional)
 
 - `API_KEY` - When set, all requests to `/mcp` must include this key via `Authorization: Bearer <key>` or `X-API-Key: <key>`. Leave unset for open access (local/dev mode). Enforced on `GET`, `POST` and `DELETE` alike.
-- `RATE_LIMIT_RPM` - Maximum requests per minute per IP (default: `60`). HTTP transport only.
+- `RATE_LIMIT_RPM` - Maximum requests per minute per IP (default: `60`). IPv6 clients are grouped by /56. HTTP transport only.
+- `RATE_LIMIT_ANTHROPIC_RPM` - Maximum requests per minute for Anthropic's outbound range (`160.79.104.0/21`), shared by all claude.ai users, who all reach the server from it (default: `600`). Behind a reverse proxy, list it in `TRUSTED_PROXIES` so the real client IP is seen. HTTP transport only.
 - `TRUSTED_PROXIES` - Comma-separated list of trusted proxy IPs or CIDR ranges (e.g. `10.0.0.0/8,172.16.0.0/12`). When set, `X-Forwarded-For` is honoured only for requests originating from these addresses. Leave unset to always use the direct connection IP.
 - `ALLOWED_ORIGINS` - Comma-separated list of browser origins permitted to reach the server (e.g. `http://localhost:5173,https://app.example`). Protects against DNS rebinding: any request carrying an `Origin` header that is not listed is rejected with `403`. Requests without an `Origin` header — CLI clients and SDK transports — are unaffected. Empty by default.
 

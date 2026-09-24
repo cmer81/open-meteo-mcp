@@ -22,6 +22,7 @@ services:
       # HTTP Transport Security (optional)
       # - API_KEY=your-secret-key
       # - RATE_LIMIT_RPM=60
+      # - RATE_LIMIT_ANTHROPIC_RPM=600
       # - TRUSTED_PROXIES=10.0.0.0/8,172.16.0.0/12
       # Browser origins allowed (DNS rebinding protection). Empty = any request
       # carrying an Origin header is rejected with 403.

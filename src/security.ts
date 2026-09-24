@@ -1,5 +1,6 @@
+import { BlockList, isIPv4 } from 'node:net';
 import type { NextFunction, Request, Response } from 'express';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 /**
  * Generates a cryptographically secure session ID using the Web Crypto API
@@ -202,20 +203,47 @@ export function getClientIp(req: Request): string {
 // Rate limiter
 // ---------------------------------------------------------------------------
 
+// Anthropic's outbound range: every claude.ai user's MCP traffic arrives from
+// it, so keying the limit per IP would make all of them share one client's
+// budget. IPv4 only; Anthropic publishes no IPv6 range for outbound requests.
+// https://platform.claude.com/docs/en/api/ip-addresses
+const ANTHROPIC_EGRESS = new BlockList();
+ANTHROPIC_EGRESS.addSubnet('160.79.104.0', 21, 'ipv4');
+
+export function isAnthropicEgressIp(ip: string): boolean {
+  return isIPv4(ip) && ANTHROPIC_EGRESS.check(ip, 'ipv4');
+}
+
+function readRpm(value: string | undefined, fallback: number): number {
+  const rpm = parseInt(value ?? '', 10);
+  return Number.isFinite(rpm) && rpm > 0 ? rpm : fallback;
+}
+
 /**
- * Creates an express-rate-limit middleware.
- * Reads RATE_LIMIT_RPM from env (default: 60 requests per minute).
- * Uses trusted-proxy-aware IP extraction for the key.
+ * Creates an express-rate-limit middleware with two tiers:
+ *
+ *   - RATE_LIMIT_RPM (default 60) per client IP. IPv6 clients are grouped by
+ *     /56, since one client typically controls a whole /64 or larger and could
+ *     otherwise dodge the limit by rotating addresses.
+ *   - RATE_LIMIT_ANTHROPIC_RPM (default 600) for Anthropic's outbound range,
+ *     shared by all claude.ai users as one pool.
+ *
+ * The client IP comes from getClientIp, so X-Forwarded-For is only believed
+ * from TRUSTED_PROXIES: a direct client cannot claim the Anthropic tier. Behind
+ * a proxy that is not listed there, every request looks like the proxy.
  */
 export function createRateLimiter() {
-  const rpm = parseInt(process.env.RATE_LIMIT_RPM ?? '60', 10);
-  const max = Number.isFinite(rpm) && rpm > 0 ? rpm : 60;
+  const perIp = readRpm(process.env.RATE_LIMIT_RPM, 60);
+  const anthropic = readRpm(process.env.RATE_LIMIT_ANTHROPIC_RPM, 600);
 
   return rateLimit({
     windowMs: 60_000,
-    max,
+    max: (req) => (isAnthropicEgressIp(getClientIp(req)) ? anthropic : perIp),
     standardHeaders: true,
     legacyHeaders: false,
-    keyGenerator: (req) => getClientIp(req),
+    keyGenerator: (req) => {
+      const ip = getClientIp(req);
+      return isAnthropicEgressIp(ip) ? 'anthropic-egress' : ipKeyGenerator(ip);
+    },
   });
 }
