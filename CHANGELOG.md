@@ -8,6 +8,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [2.2.0] - 2026-09-24
+
+Model enums refreshed against the live API, and upstream responses are now
+size-capped. Tool names are unchanged; the input changes are additive except
+for geocoding's `format`, described below.
+
+### Added
+
+- **`ecmwf_forecast` accepts every model the `/v1/ecmwf` endpoint serves**:
+  `ecmwf_ifs04`, `ecmwf_aifs025`, `ecmwf_aifs025_single`,
+  `ecmwf_ifs_europe_ensemble_mean` and `ecmwf_aifs_europe_ensemble_mean`, in
+  addition to `ecmwf_ifs`, `ecmwf_ifs025` and `best_match`. The tool
+  description no longer claims AIFS returns 400. (#70)
+- **New model IDs** for forecast, the provider-specific tools, ensemble and
+  marine, among them the CHMI ALADIN models, the 15-minute HRRR / ICON-D2 /
+  AROME variants, `jma_msm_upper_level`, the provider-prefixed ensemble names
+  (`dwd_icon_*_eps`, `cmc_gem_geps`), `google_weathernext2_ensemble`, every
+  `*_ensemble_mean` series, and the ECMWF WAM / NCEP GEFS-Wave marine models.
+  (#71)
+
+### Changed
+
+- **Upstream responses are capped in size**: 10 MB for `weather_archive` and
+  `climate_projection`, 5 MB for every other tool. Before this, a single
+  archive query could download tens of MB and grow the process by 150 MB+,
+  even though only 25 KB reached the model after truncation. A request over
+  the cap now fails with `Response too large to process` and a hint to narrow
+  it. (#67)
+- **`geocoding`'s `format` only accepts `json`.** `protobuf` was offered but
+  could never be returned as tool text. (#72)
+
+### Fixed
+
+- `express-rate-limit` is now declared as a direct dependency. It was imported
+  by `src/security.ts` but resolved only through the MCP SDK's own
+  dependencies. (#68)
+
 ## [2.1.0] - 2026-09-15
 
 Major dependency upgrades. Tool names, parameters, schemas and responses are
@@ -181,5 +218,8 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[2.2.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.1.0...v2.2.0
+[2.1.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.0.2...v2.1.0
+[2.0.2]: https://github.com/cmer81/open-meteo-mcp/compare/v2.0.1...v2.0.2
 [2.0.1]: https://github.com/cmer81/open-meteo-mcp/compare/v2.0.0...v2.0.1
 [2.0.0]: https://github.com/cmer81/open-meteo-mcp/compare/v1.7.0...v2.0.0
