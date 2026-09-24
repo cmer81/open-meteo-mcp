@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [Unreleased]
+
+### Changed
+
+- **claude.ai traffic gets its own rate-limit pool.** Every claude.ai user
+  reaches the server from Anthropic's outbound range `160.79.104.0/21`, so the
+  per-IP limit (60 rpm) was one budget shared by all of them, with each MCP
+  connection spending 2–3 requests. That range now has a separate pool,
+  `RATE_LIMIT_ANTHROPIC_RPM` (default 600). `X-Forwarded-For` is still only
+  believed from `TRUSTED_PROXIES`, so a direct client cannot claim the pool.
+- **IPv6 clients are rate-limited per /56** instead of per address, so rotating
+  addresses within one allocation no longer resets the limit.
+
 ## [2.4.0] - 2026-09-25
 
 ### Changed
@@ -287,6 +300,7 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[Unreleased]: https://github.com/cmer81/open-meteo-mcp/compare/v2.4.0...HEAD
 [2.4.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.3.2...v2.4.0
 [2.3.2]: https://github.com/cmer81/open-meteo-mcp/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/cmer81/open-meteo-mcp/compare/v2.3.0...v2.3.1
