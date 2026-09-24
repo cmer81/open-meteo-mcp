@@ -13,6 +13,7 @@ This is an Open-Meteo MCP (Model Context Protocol) server that provides comprehe
 - **`src/index.ts`** - Main MCP server implementation using `@modelcontextprotocol/sdk`
 - **`src/client.ts`** - HTTP client with multiple API endpoints (forecast, archive, air quality, marine, etc.)
 - **`src/tools.ts`** - Tool metadata (name, title, description, annotations); input schemas come from `types.ts`
+- **`src/instructions.ts`** - Server `instructions` sent at initialize (lands in the client's system prompt): which tool answers which question, plus shared request conventions. A test fails if a tool is not mentioned, so update it when adding a tool
 - **`src/types.ts`** - Zod validation schemas for all API parameters and responses
 - **`src/truncation.ts`** - Caps oversized responses and serializes them for the client
 - **`src/security.ts`** - Auth, origin validation, rate limiting, trusted-proxy IP extraction (HTTP transport only)

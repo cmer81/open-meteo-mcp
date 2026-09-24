@@ -3,6 +3,7 @@ import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OpenMeteoClient } from './client.js';
 import { OpenMeteoMCPServer } from './index.js';
+import { SERVER_INSTRUCTIONS } from './instructions.js';
 import { ALL_TOOLS } from './tools.js';
 import { CHARACTER_LIMIT } from './truncation.js';
 import {
@@ -280,6 +281,32 @@ describe('Full protocol round trip via McpServer#registerTool', () => {
       precipitation_unit: 'mm',
       timeformat: 'iso8601',
     });
+  });
+
+  it('sends server instructions naming every tool in the initialize result', async () => {
+    const initRes = await supertest(app)
+      .post('/mcp')
+      .set('Content-Type', 'application/json')
+      .set('Accept', 'application/json, text/event-stream')
+      .send({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: { name: 'test-client', version: '1.0.0' },
+        },
+      });
+
+    expect(initRes.status).toBe(200);
+    const instructions = initRes.body.result.instructions as string;
+    expect(instructions).toBe(SERVER_INSTRUCTIONS);
+    // Every tool is routed somewhere, so a tool added without updating the
+    // instructions fails here instead of going unmentioned.
+    for (const tool of ALL_TOOLS) {
+      expect(instructions).toContain(`\`${tool.name}\``);
+    }
   });
 
   // Tools whose params schema carries a .refine() used to reach the SDK as a

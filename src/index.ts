@@ -10,6 +10,7 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import express from 'express';
 import type { z } from 'zod';
 import { OpenMeteoClient } from './client.js';
+import { SERVER_INSTRUCTIONS } from './instructions.js';
 import {
   createAcceptNormalizer,
   createAuthMiddleware,
@@ -197,6 +198,7 @@ export class OpenMeteoMCPServer {
         capabilities: {
           tools: {},
         },
+        instructions: SERVER_INSTRUCTIONS,
       },
     );
 

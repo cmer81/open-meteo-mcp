@@ -69,6 +69,16 @@ await client.connect(transport);
 
 let failures = 0;
 
+// Checked against the built server, so a packaging or SDK change that drops the
+// initialize-time instructions shows up here.
+const instructions = client.getInstructions();
+if (!instructions) {
+  console.log('FAIL server sent no instructions in the initialize result');
+  failures++;
+} else {
+  console.log(`instructions -> ${instructions.length} chars`);
+}
+
 const { tools } = await client.listTools();
 console.log(`listTools -> ${tools.length} tools`);
 
