@@ -512,7 +512,7 @@ npm run lint
 
 The `evals/` directory holds an LLM-usability benchmark for this server's tools — a different check than `npm test`. Unit tests verify the code is correct; this verifies that an LLM given *only* this server's tools (no other context) can actually complete realistic tasks with them.
 
-- `evals/evaluation.xml` — 10 independent, read-only question/answer pairs built on stable historical data (ERA5 archive, CMIP6 projections, geocoding, elevation), so the expected answers never change over time.
+- `evals/evaluation.xml` — 14 independent, read-only question/answer pairs built on stable historical data (ERA5 archive, CMIP6 projections, geocoding, elevation), so the expected answers never change over time. The first 10 name the tool to use; the last 4 do not, so they also check tool choice and local-time handling (what the server instructions steer).
 - `evals/scripts/evaluation.py` — harness that launches the server, lets an agent answer each question using only its tools, and compares the answer against the expected one.
 
 ### Running the evaluation
@@ -520,12 +520,16 @@ The `evals/` directory holds an LLM-usability benchmark for this server's tools 
 ```bash
 npm run build
 pip install -r evals/scripts/requirements.txt
-export ANTHROPIC_API_KEY=your_api_key_here
+echo 'ANTHROPIC_API_KEY=your_api_key_here' >> .env   # or export it; .env is gitignored
 
 npm run eval
-# or directly:
-python3 evals/scripts/evaluation.py -t stdio -c node -a dist/index.js evals/evaluation.xml
+# baseline without the server's instructions, to measure their effect:
+npm run eval -- --no-server-instructions
+# other model or report file:
+npm run eval -- -m claude-opus-5-5 -o eval-report.md
 ```
+
+The harness passes the server's initialize-time `instructions` to the model in the system prompt, as MCP clients do. `TRANSPORT=stdio` is forced for the server it launches, so a `.env` copied from `.env.example` (which sets `TRANSPORT=http`) does not make it listen on HTTP instead.
 
 This calls the real Anthropic API for every question, so it consumes tokens/credits — it's a manual quality check for tool design, not part of CI.
 

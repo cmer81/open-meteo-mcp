@@ -26,7 +26,7 @@
  *   npm run build && npm run smoke
  */
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { getDefaultEnvironment, StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
 const PARIS = { latitude: 48.85, longitude: 2.35 };
 
@@ -63,7 +63,15 @@ const CALLS = {
   gem_forecast: { latitude: 45.5, longitude: -73.57, hourly: ['temperature_2m'] },
 };
 
-const transport = new StdioClientTransport({ command: 'node', args: ['dist/index.js'] });
+// The server loads .env, and a .env copied from .env.example sets TRANSPORT=http:
+// the server would then listen on a port while this client waits on stdio
+// forever. The spawned env only carries getDefaultEnvironment() plus this, and
+// dotenv never overrides a variable that is already set.
+const transport = new StdioClientTransport({
+  command: 'node',
+  args: ['dist/index.js'],
+  env: { ...getDefaultEnvironment(), TRANSPORT: 'stdio' },
+});
 const client = new Client({ name: 'smoke-test', version: '1.0.0' }, { capabilities: {} });
 await client.connect(transport);
 

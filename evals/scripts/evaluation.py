@@ -15,8 +15,15 @@ from pathlib import Path
 from typing import Any
 
 from anthropic import Anthropic
+from dotenv import load_dotenv
 
 from connections import create_connection
+
+DEFAULT_MODEL = "claude-sonnet-5"
+
+# The repository's .env (gitignored), so ANTHROPIC_API_KEY can live there
+# instead of being exported in every shell.
+DOTENV_PATH = Path(__file__).resolve().parents[2] / ".env"
 
 EVALUATION_PROMPT = """You are an AI assistant with access to tools.
 
@@ -89,6 +96,7 @@ async def agent_loop(
     question: str,
     tools: list[dict[str, Any]],
     connection: Any,
+    system: str,
 ) -> tuple[str, dict[str, Any]]:
     """Run the agent loop with MCP tools."""
     messages = [{"role": "user", "content": question}]
@@ -97,7 +105,7 @@ async def agent_loop(
         client.messages.create,
         model=model,
         max_tokens=4096,
-        system=EVALUATION_PROMPT,
+        system=system,
         messages=messages,
         tools=tools,
     )
@@ -107,38 +115,40 @@ async def agent_loop(
     tool_metrics = {}
 
     while response.stop_reason == "tool_use":
-        tool_use = next(block for block in response.content if block.type == "tool_use")
-        tool_name = tool_use.name
-        tool_input = tool_use.input
+        # A response can hold several parallel tool calls, and the API rejects
+        # the next turn unless every one of them gets a tool_result.
+        tool_results = []
+        for tool_use in (block for block in response.content if block.type == "tool_use"):
+            tool_name = tool_use.name
 
-        tool_start_ts = time.time()
-        try:
-            tool_result = await connection.call_tool(tool_name, tool_input)
-            tool_response = json.dumps(tool_result) if isinstance(tool_result, (dict, list)) else str(tool_result)
-        except Exception as e:
-            tool_response = f"Error executing tool {tool_name}: {str(e)}\n"
-            tool_response += traceback.format_exc()
-        tool_duration = time.time() - tool_start_ts
+            tool_start_ts = time.time()
+            try:
+                tool_response, is_error = await connection.call_tool(tool_name, tool_use.input)
+            except Exception as e:
+                tool_response = f"Error executing tool {tool_name}: {str(e)}\n"
+                tool_response += traceback.format_exc()
+                is_error = True
+            tool_duration = time.time() - tool_start_ts
 
-        if tool_name not in tool_metrics:
-            tool_metrics[tool_name] = {"count": 0, "durations": []}
-        tool_metrics[tool_name]["count"] += 1
-        tool_metrics[tool_name]["durations"].append(tool_duration)
+            if tool_name not in tool_metrics:
+                tool_metrics[tool_name] = {"count": 0, "durations": []}
+            tool_metrics[tool_name]["count"] += 1
+            tool_metrics[tool_name]["durations"].append(tool_duration)
 
-        messages.append({
-            "role": "user",
-            "content": [{
+            tool_results.append({
                 "type": "tool_result",
                 "tool_use_id": tool_use.id,
                 "content": tool_response,
-            }]
-        })
+                "is_error": is_error,
+            })
+
+        messages.append({"role": "user", "content": tool_results})
 
         response = await asyncio.to_thread(
             client.messages.create,
             model=model,
             max_tokens=4096,
-            system=EVALUATION_PROMPT,
+            system=system,
             messages=messages,
             tools=tools,
         )
@@ -158,12 +168,15 @@ async def evaluate_single_task(
     tools: list[dict[str, Any]],
     connection: Any,
     task_index: int,
+    system: str,
 ) -> dict[str, Any]:
     """Evaluate a single QA pair with the given tools."""
     start_time = time.time()
 
     print(f"Task {task_index + 1}: Running task with question: {qa_pair['question']}")
-    response, tool_metrics = await agent_loop(client, model, qa_pair["question"], tools, connection)
+    response, tool_metrics = await agent_loop(
+        client, model, qa_pair["question"], tools, connection, system
+    )
 
     response_value = extract_xml_content(response, "response")
     summary = extract_xml_content(response, "summary")
@@ -220,10 +233,18 @@ TASK_TEMPLATE = """
 async def run_evaluation(
     eval_path: Path,
     connection: Any,
-    model: str = "claude-3-7-sonnet-20250219",
+    model: str = DEFAULT_MODEL,
+    use_server_instructions: bool = True,
 ) -> str:
     """Run evaluation with MCP server tools."""
     print("🚀 Starting Evaluation")
+
+    system = EVALUATION_PROMPT
+    if use_server_instructions and connection.instructions:
+        system = f"{EVALUATION_PROMPT}\n\n{connection.instructions}"
+        print(f"📋 Using server instructions ({len(connection.instructions)} chars)")
+    else:
+        print("📋 Not using server instructions")
 
     client = Anthropic()
 
@@ -236,7 +257,7 @@ async def run_evaluation(
     results = []
     for i, qa_pair in enumerate(qa_pairs):
         print(f"Processing task {i + 1}/{len(qa_pairs)}")
-        result = await evaluate_single_task(client, model, qa_pair, tools, connection, i)
+        result = await evaluate_single_task(client, model, qa_pair, tools, connection, i, system)
         results.append(result)
 
     correct = sum(r["score"] for r in results)
@@ -309,19 +330,24 @@ async def main():
         epilog="""
 Examples:
   # Evaluate a local stdio MCP server
-  python evaluation.py -t stdio -c python -a my_server.py eval.xml
+  python evaluation.py eval.xml -t stdio -c python -a my_server.py
 
   # Evaluate an SSE MCP server
   python evaluation.py -t sse -u https://example.com/mcp -H "Authorization: Bearer token" eval.xml
 
   # Evaluate an HTTP MCP server with custom model
-  python evaluation.py -t http -u https://example.com/mcp -m claude-3-5-sonnet-20241022 eval.xml
+  python evaluation.py -t http -u https://example.com/mcp -m claude-sonnet-5 eval.xml
         """,
     )
 
     parser.add_argument("eval_file", type=Path, help="Path to evaluation XML file")
     parser.add_argument("-t", "--transport", choices=["stdio", "sse", "http"], default="stdio", help="Transport type (default: stdio)")
-    parser.add_argument("-m", "--model", default="claude-3-7-sonnet-20250219", help="Claude model to use (default: claude-3-7-sonnet-20250219)")
+    parser.add_argument("-m", "--model", default=DEFAULT_MODEL, help=f"Claude model to use (default: {DEFAULT_MODEL})")
+    parser.add_argument(
+        "--no-server-instructions",
+        action="store_true",
+        help="Leave the server's initialize-time instructions out of the system prompt, for a baseline run",
+    )
 
     stdio_group = parser.add_argument_group("stdio options")
     stdio_group.add_argument("-c", "--command", help="Command to run MCP server (stdio only)")
@@ -335,6 +361,9 @@ Examples:
     parser.add_argument("-o", "--output", type=Path, help="Output file for evaluation report (default: stdout)")
 
     args = parser.parse_args()
+
+    # Variables already set in the environment win over .env.
+    load_dotenv(DOTENV_PATH)
 
     if not args.eval_file.exists():
         print(f"Error: Evaluation file not found: {args.eval_file}")
@@ -360,7 +389,9 @@ Examples:
 
     async with connection:
         print("✅ Connected successfully")
-        report = await run_evaluation(args.eval_file, connection, args.model)
+        report = await run_evaluation(
+            args.eval_file, connection, args.model, not args.no_server_instructions
+        )
 
         if args.output:
             args.output.write_text(report)

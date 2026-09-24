@@ -39,4 +39,32 @@
       <question>Use the geocoding tool to find the entry named "Cordoba" located in Argentina (Cordoba province, not Spain, Mexico, or Colombia), then retrieve ERA5 historical daily minimum temperatures for that location from 2007-07-05 to 2007-07-12 (America/Argentina/Cordoba timezone). On which single date did the lowest daily minimum temperature occur during that window? Answer in YYYY-MM-DD format.</question>
       <answer>2007-07-11</answer>
    </qa_pair>
+   <!--
+      The pairs below name no tool: they check that the model picks the right
+      tool and handles local time on its own, which is what the server's
+      instructions are for. Answers were checked against both the default
+      archive model and models=era5; the Sydney and Tokyo answers differ if
+      the data is read in GMT instead of local time.
+
+      The climate pair uses a UTC+0 city on purpose: /v1/climate shifts daily
+      dates by a day when a non-zero `timezone` is passed (Cairo's peak is
+      2050-06-29 in GMT but 2050-06-30 with timezone=auto), which would make
+      the expected answer depend on whether the model sets a timezone.
+   -->
+   <qa_pair>
+      <question>According to ERA5 reanalysis, which was the hottest day in Athens, Greece between 22 and 30 June 2007? Answer in YYYY-MM-DD format.</question>
+      <answer>2007-06-26</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>According to ERA5 reanalysis, on which day between 1 and 10 February 2020 did Sydney, Australia record its lowest daily minimum temperature, with days counted in Sydney local time? Answer in YYYY-MM-DD format.</question>
+      <answer>2020-02-05</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>According to hourly ERA5 reanalysis, at what local time did the air temperature peak in Tokyo, Japan on 24 January 2023? Answer in HH:MM 24-hour format.</question>
+      <answer>15:00</answer>
+   </qa_pair>
+   <qa_pair>
+      <question>According to the CMIP6 climate model MRI_AGCM3_2_S, which day of June 2050 is projected to be the hottest in Dakar, Senegal? Answer in YYYY-MM-DD format.</question>
+      <answer>2050-06-30</answer>
+   </qa_pair>
 </evaluation>

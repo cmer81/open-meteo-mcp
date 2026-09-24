@@ -16,6 +16,9 @@ class MCPConnection(ABC):
     def __init__(self):
         self.session = None
         self._stack = None
+        # Server `instructions` from the initialize result. Real MCP clients put
+        # them in the model's system prompt, so the harness does too.
+        self.instructions = None
 
     @abstractmethod
     def _create_context(self):
@@ -39,7 +42,8 @@ class MCPConnection(ABC):
 
             session_ctx = ClientSession(read, write)
             self.session = await self._stack.enter_async_context(session_ctx)
-            await self.session.initialize()
+            init_result = await self.session.initialize()
+            self.instructions = init_result.instructions
             return self
         except BaseException:
             await self._stack.__aexit__(None, None, None)
@@ -64,10 +68,13 @@ class MCPConnection(ABC):
             for tool in response.tools
         ]
 
-    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> Any:
-        """Call a tool on the MCP server with provided arguments."""
+    async def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> tuple[str, bool]:
+        """Call a tool on the MCP server; return its text content and whether it is an error."""
         result = await self.session.call_tool(tool_name, arguments=arguments)
-        return result.content
+        # result.content is a list of SDK content objects (TextContent, ...),
+        # which json.dumps cannot serialize; the model needs the text itself.
+        text = "\n".join(block.text for block in result.content if block.type == "text")
+        return text, bool(result.isError)
 
 
 class MCPConnectionStdio(MCPConnection):
