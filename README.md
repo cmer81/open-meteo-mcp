@@ -166,7 +166,7 @@ The server also supports Streamable HTTP transport for remote deployments. Set t
 TRANSPORT=http PORT=3000 npx open-meteo-mcp-server
 ```
 
-This starts an Express server on the specified port (default: 3000) with the MCP endpoint at `/mcp`. The HTTP transport supports session management with unique session IDs per client.
+This starts an Express server on the specified port (default: 3000) with the MCP endpoint at `/mcp`. The HTTP transport is stateless: each `POST /mcp` is handled on its own, no session ID is issued, and `GET`/`DELETE /mcp` answer `405`. No tool keeps state between calls, so clients lose nothing, and there is no session table for one client to fill up.
 
 > **The server binds to `127.0.0.1` by default**, so it is reachable only from the local machine. To accept connections from other hosts, set `HOST=0.0.0.0` explicitly. The Docker image already does this, so published ports work without extra configuration.
 

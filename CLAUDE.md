@@ -36,7 +36,7 @@ Each service can be configured via environment variables with sensible defaults.
 
 The server supports two transport modes (configured via `TRANSPORT` env var):
 - **stdio** (default) - Standard input/output for direct MCP client integration (Claude Desktop, etc.). Never write logs to stdout here — it would corrupt the protocol stream; `log()` writes to stderr.
-- **Streamable HTTP** (`TRANSPORT=http`) - Express-based HTTP server with session management, listening on `PORT` (default: 3000) at `/mcp` endpoint, bound to `HOST` (default: `127.0.0.1`, loopback only)
+- **Streamable HTTP** (`TRANSPORT=http`) - Express-based, **stateless** HTTP server (a fresh `McpServer` + transport per `POST`, no session IDs, `GET`/`DELETE` answer 405), listening on `PORT` (default: 3000) at `/mcp` endpoint, bound to `HOST` (default: `127.0.0.1`, loopback only)
 
 ### HTTP middleware ordering
 

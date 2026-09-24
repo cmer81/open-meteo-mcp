@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [Unreleased]
+
+### Changed
+
+- **The HTTP transport is stateless.** Each `POST /mcp` gets its own server
+  instance, no `mcp-session-id` is issued, and `GET` / `DELETE /mcp` answer
+  `405`, as the spec asks of stateless servers. Before, the server kept at most
+  100 sessions with a 1-hour idle timeout and no per-client limit: 100
+  `initialize` requests from a single client locked everyone else out with
+  `503` for an hour. A per-IP cap would not have fixed it for claude.ai, whose
+  users all arrive from Anthropic's shared egress IPs. No tool keeps state
+  between calls, so clients lose nothing; standard MCP clients handle a server
+  that issues no session ID. stdio is unchanged.
+
 ## [2.3.2] - 2026-09-25
 
 ### Changed
@@ -273,6 +287,7 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[Unreleased]: https://github.com/cmer81/open-meteo-mcp/compare/v2.3.2...HEAD
 [2.3.2]: https://github.com/cmer81/open-meteo-mcp/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/cmer81/open-meteo-mcp/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.2.1...v2.3.0

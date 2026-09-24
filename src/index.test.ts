@@ -102,94 +102,78 @@ describe('Module imports', () => {
   });
 });
 
-describe('GET /mcp', () => {
-  let app: express.Application;
-
-  beforeEach(() => {
-    process.env.NODE_ENV = 'test';
-    const server = new OpenMeteoMCPServer();
-    app = (server as unknown as { buildExpressApp(): express.Application }).buildExpressApp();
-  });
-
-  it('returns 400 when mcp-session-id header is missing', async () => {
-    const res = await supertest(app).get('/mcp');
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBeDefined();
-    expect(res.body.error.code).toBe(-32600);
-  });
-
-  it('returns 404 when mcp-session-id refers to unknown session', async () => {
-    const res = await supertest(app).get('/mcp').set('mcp-session-id', 'nonexistent-session-id');
-    expect(res.status).toBe(404);
-    expect(res.body.error).toBeDefined();
-    expect(res.body.error.code).toBe(-32600);
-  });
-});
-
-describe('DELETE /mcp', () => {
+describe('Stateless HTTP transport', () => {
   let app: express.Application;
   let mcpServer: OpenMeteoMCPServer;
+  const acceptBoth = 'application/json, text/event-stream';
+  const initBody = {
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'initialize',
+    params: {
+      protocolVersion: '2024-11-05',
+      capabilities: {},
+      clientInfo: { name: 'test-client', version: '1.0.0' },
+    },
+  };
+  const post = (body: object) =>
+    supertest(app)
+      .post('/mcp')
+      .set('Content-Type', 'application/json')
+      .set('Accept', acceptBoth)
+      .send(body);
 
   beforeEach(() => {
     process.env.NODE_ENV = 'test';
+    // Above the request counts below, so the rate limiter stays out of the way.
+    process.env.RATE_LIMIT_RPM = '1000';
     mcpServer = new OpenMeteoMCPServer();
     app = (mcpServer as unknown as { buildExpressApp(): express.Application }).buildExpressApp();
   });
 
-  it('returns 400 when mcp-session-id header is missing', async () => {
-    const res = await supertest(app).delete('/mcp');
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBeDefined();
-    expect(res.body.error.code).toBe(-32600);
+  afterEach(() => {
+    delete process.env.RATE_LIMIT_RPM;
   });
 
-  it('returns 404 when mcp-session-id refers to unknown session', async () => {
-    const res = await supertest(app).delete('/mcp').set('mcp-session-id', 'nonexistent-session-id');
-    expect(res.status).toBe(404);
-    expect(res.body.error).toBeDefined();
-    expect(res.body.error.code).toBe(-32600);
+  it.each(['get', 'delete'] as const)(
+    'answers %s /mcp with 405, as the spec asks of stateless servers',
+    async (verb) => {
+      const res = await supertest(app)[verb]('/mcp');
+      expect(res.status).toBe(405);
+      expect(res.headers.allow).toBe('POST');
+      expect(res.body.error.code).toBe(-32000);
+    },
+  );
+
+  it('issues no session id', async () => {
+    const res = await post(initBody);
+    expect(res.status).toBe(200);
+    expect(res.headers['mcp-session-id']).toBeUndefined();
   });
 
-  it('calls transport.close() and returns 200 when session exists', async () => {
-    const fakeTransport = {
-      close: vi.fn().mockResolvedValue(undefined),
-      handleRequest: vi.fn(),
-    };
-    const sessionId = 'test-session-id-1234';
-    const sessionServers = (
-      mcpServer as unknown as {
-        sessionServers: Map<
-          string,
-          { server: object; transport: typeof fakeTransport; lastActivity: number }
-        >;
-      }
-    ).sessionServers;
+  it('serves a tool call on its own, with no prior initialize or session id', async () => {
+    const client = (mcpServer as unknown as { client: OpenMeteoClient }).client;
+    vi.spyOn(client, 'getElevation').mockResolvedValue({ elevation: [35] });
 
-    // Wire up onclose so the session is removed from the map (as in production)
-    const fakeServer = {
-      onclose: undefined as (() => void) | undefined,
-    };
-    fakeTransport.close.mockImplementation(async () => {
-      fakeServer.onclose?.();
+    const res = await post({
+      jsonrpc: '2.0',
+      id: 7,
+      method: 'tools/call',
+      params: { name: 'elevation', arguments: { latitude: 48.85, longitude: 2.35 } },
     });
-    sessionServers.set(sessionId, {
-      server: fakeServer as unknown as object,
-      transport:
-        fakeTransport as unknown as import('@modelcontextprotocol/sdk/server/streamableHttp.js').StreamableHTTPServerTransport,
-      lastActivity: Date.now(),
-    });
-    // Set up the onclose callback as production code does
-    fakeServer.onclose = () => {
-      sessionServers.delete(sessionId);
-    };
-
-    const res = await supertest(app).delete('/mcp').set('mcp-session-id', sessionId);
 
     expect(res.status).toBe(200);
-    expect(res.body.message).toBe('Session terminated');
-    expect(fakeTransport.close).toHaveBeenCalledOnce();
-    // Verify session was removed from the map via onclose
-    expect(sessionServers.has(sessionId)).toBe(false);
+    expect(JSON.parse(res.body.result.content[0].text)).toEqual({ elevation: [35] });
+  });
+
+  // The stateful transport capped the server at 100 sessions with a 1-hour idle
+  // timeout: 100 initialize requests from one client answered everyone else
+  // with 503 for an hour.
+  it('keeps accepting clients after more initializations than the old session cap', async () => {
+    for (let i = 0; i < 120; i++) {
+      const res = await post({ ...initBody, id: i });
+      expect(res.status, `initialize #${i}`).toBe(200);
+    }
   });
 });
 
@@ -235,12 +219,9 @@ describe('Full protocol round trip via McpServer#registerTool', () => {
       });
 
     expect(initRes.status).toBe(200);
-    const sessionId = initRes.headers['mcp-session-id'];
-    expect(sessionId).toBeDefined();
 
     const listRes = await supertest(app)
       .post('/mcp')
-      .set('mcp-session-id', sessionId)
       .set('Content-Type', 'application/json')
       .set('Accept', acceptBoth)
       .send({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
@@ -258,7 +239,6 @@ describe('Full protocol round trip via McpServer#registerTool', () => {
 
     const callRes = await supertest(app)
       .post('/mcp')
-      .set('mcp-session-id', sessionId)
       .set('Content-Type', 'application/json')
       .set('Accept', acceptBoth)
       .send({
@@ -314,25 +294,8 @@ describe('Full protocol round trip via McpServer#registerTool', () => {
   // while still validating strictly, leaving clients unable to know what to send.
   it('publishes a complete input schema for every tool', async () => {
     const acceptBoth = 'application/json, text/event-stream';
-    const initRes = await supertest(app)
-      .post('/mcp')
-      .set('Content-Type', 'application/json')
-      .set('Accept', acceptBoth)
-      .send({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-          protocolVersion: '2024-11-05',
-          capabilities: {},
-          clientInfo: { name: 'test-client', version: '1.0.0' },
-        },
-      });
-    const sessionId = initRes.headers['mcp-session-id'];
-
     const listRes = await supertest(app)
       .post('/mcp')
-      .set('mcp-session-id', sessionId)
       .set('Content-Type', 'application/json')
       .set('Accept', acceptBoth)
       .send({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
@@ -387,25 +350,8 @@ describe('Full protocol round trip via McpServer#registerTool', () => {
     });
 
     const acceptBoth = 'application/json, text/event-stream';
-    const initRes = await supertest(app)
-      .post('/mcp')
-      .set('Content-Type', 'application/json')
-      .set('Accept', acceptBoth)
-      .send({
-        jsonrpc: '2.0',
-        id: 1,
-        method: 'initialize',
-        params: {
-          protocolVersion: '2024-11-05',
-          capabilities: {},
-          clientInfo: { name: 'test-client', version: '1.0.0' },
-        },
-      });
-    const sessionId = initRes.headers['mcp-session-id'];
-
     const callRes = await supertest(app)
       .post('/mcp')
-      .set('mcp-session-id', sessionId)
       .set('Content-Type', 'application/json')
       .set('Accept', acceptBoth)
       .send({
@@ -448,20 +394,20 @@ describe('HTTP transport security', () => {
   });
 
   // The auth and rate-limit middlewares used to be registered after the GET and
-  // DELETE routes, so Express never ran them for those two verbs: an unauthenticated
-  // caller holding a session id could terminate someone else's session.
+  // DELETE routes, so Express never ran them for those two verbs. Those routes
+  // now only answer 405, but every verb must still hit the guards first.
   describe('API key enforcement', () => {
     beforeEach(() => {
       process.env.API_KEY = 'test-secret';
     });
 
     it('rejects GET /mcp when no API key is supplied', async () => {
-      const res = await supertest(app).get('/mcp').set('mcp-session-id', 'some-session-id');
+      const res = await supertest(app).get('/mcp');
       expect(res.status).toBe(401);
     });
 
     it('rejects DELETE /mcp when no API key is supplied', async () => {
-      const res = await supertest(app).delete('/mcp').set('mcp-session-id', 'some-session-id');
+      const res = await supertest(app).delete('/mcp');
       expect(res.status).toBe(401);
     });
 
@@ -475,12 +421,9 @@ describe('HTTP transport security', () => {
     });
 
     it('lets an authenticated caller through to the route handler', async () => {
-      const res = await supertest(app)
-        .delete('/mcp')
-        .set('X-API-Key', 'test-secret')
-        .set('mcp-session-id', 'unknown-session');
-      // 404 = auth passed, the session simply does not exist
-      expect(res.status).toBe(404);
+      const res = await supertest(app).delete('/mcp').set('X-API-Key', 'test-secret');
+      // 405 = auth passed and the route itself answered
+      expect(res.status).toBe(405);
     });
 
     it('leaves /health reachable without a key for container probes', async () => {
