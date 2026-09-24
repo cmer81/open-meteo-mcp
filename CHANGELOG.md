@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [Unreleased]
+
+### Changed
+
+- **Parameters whose meaning isn't obvious from their name are now described**
+  in the published schemas: `timezone` on every tool (IANA name or `"auto"`
+  for local time; the API defaults to GMT), `elevation` (values are adjusted
+  to it), `current` / `current_weather`, `minutely_15`, `models` where
+  omitting it picks a default, air-quality `domains`, flood `ensemble`,
+  ensemble `temporal_resolution`, seasonal `weekly` / `monthly`, climate
+  `disable_bias_correction`, and geocoding's `name`, `count`, `language` and
+  `countryCode`. `tools/list` grows by ~4,400 characters.
+- **Day counts and geocoding's `count` only accept integers.** `past_days`,
+  `forecast_days` and `count` previously let fractional values through to the
+  API.
+
 ## [2.3.0] - 2026-09-24
 
 ### Added
@@ -247,6 +263,7 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[Unreleased]: https://github.com/cmer81/open-meteo-mcp/compare/v2.3.0...HEAD
 [2.3.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/cmer81/open-meteo-mcp/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.1.0...v2.2.0

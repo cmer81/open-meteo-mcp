@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
+  AirQualityParamsSchema,
   ArchiveParamsSchema,
   ClimateParamsSchema,
   EnsembleParamsSchema,
+  FloodParamsSchema,
   ForecastParamsSchema,
+  GeocodingParamsSchema,
+  MarineParamsSchema,
+  SeasonalParamsSchema,
 } from './types.js';
 
 describe('Fix 1: past_days cap', () => {
@@ -299,5 +304,54 @@ describe('Fix 6: pressure-level variables published as a pattern, not ~130 enum 
     const json = JSON.stringify(z.toJSONSchema(ForecastParamsSchema, { io: 'input' }));
     expect(json).not.toContain('temperature_850hPa"');
     expect(json).toContain('hPa$');
+  });
+});
+
+describe('Fix 7: parameters whose meaning is not obvious from their name are described', () => {
+  const published = (schema: z.ZodType) =>
+    z.toJSONSchema(schema, { io: 'input' }).properties as Record<string, { description?: string }>;
+
+  const withTimezone = {
+    ForecastParamsSchema,
+    ArchiveParamsSchema,
+    AirQualityParamsSchema,
+    MarineParamsSchema,
+    FloodParamsSchema,
+    SeasonalParamsSchema,
+    ClimateParamsSchema,
+    EnsembleParamsSchema,
+  };
+
+  // Without a timezone the API answers in GMT; "auto" is the value that gives
+  // local hours and days, and a caller only learns it exists from here.
+  it.each(Object.entries(withTimezone))('%s tells callers about timezone "auto"', (_, schema) => {
+    expect(published(schema).timezone?.description).toContain('"auto"');
+  });
+
+  it.each([
+    ['ArchiveParamsSchema', ArchiveParamsSchema, 'elevation'],
+    ['EnsembleParamsSchema', EnsembleParamsSchema, 'elevation'],
+    ['EnsembleParamsSchema', EnsembleParamsSchema, 'temporal_resolution'],
+    ['FloodParamsSchema', FloodParamsSchema, 'ensemble'],
+    ['AirQualityParamsSchema', AirQualityParamsSchema, 'domains'],
+    ['ClimateParamsSchema', ClimateParamsSchema, 'disable_bias_correction'],
+    ['ForecastParamsSchema', ForecastParamsSchema, 'current'],
+    ['ForecastParamsSchema', ForecastParamsSchema, 'current_weather'],
+    ['GeocodingParamsSchema', GeocodingParamsSchema, 'name'],
+    ['GeocodingParamsSchema', GeocodingParamsSchema, 'language'],
+  ] as const)('%s describes %s', (_, schema, field) => {
+    expect(published(schema)[field]?.description).toBeTruthy();
+  });
+
+  it('keeps the shared hourly variable list undescribed where it is reused as current', () => {
+    // .describe() returns a copy, so describing `current` must not leak onto `hourly`.
+    expect(published(ForecastParamsSchema).hourly?.description).toBeUndefined();
+  });
+
+  it('rejects fractional day counts', () => {
+    const base = { latitude: 48.85, longitude: 2.35 };
+    expect(ForecastParamsSchema.safeParse({ ...base, forecast_days: 2.5 }).success).toBe(false);
+    expect(MarineParamsSchema.safeParse({ ...base, past_days: 1.5 }).success).toBe(false);
+    expect(GeocodingParamsSchema.safeParse({ name: 'Paris', count: 2.5 }).success).toBe(false);
   });
 });

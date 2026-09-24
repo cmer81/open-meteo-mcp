@@ -57,15 +57,44 @@ const PAST_HOURS_DESCRIPTION = 'Hours before now to include; alternative to `pas
 const FORECAST_DAYS_DESCRIPTION = 'Days to forecast, starting today.';
 const FORECAST_HOURS_DESCRIPTION = 'Hours to forecast; alternative to `forecast_days`.';
 
+// Without a timezone the API answers in GMT, which silently shifts hours and
+// daily boundaries for any location away from Greenwich.
+export const TimezoneSchema = z
+  .string()
+  .describe(
+    'IANA time zone (e.g. "Europe/Paris"), or "auto" for the location\'s own. Default GMT.',
+  );
+const ELEVATION_DESCRIPTION =
+  'Elevation in metres to adjust the values to; defaults to the terrain height at the point.';
+const DEFAULT_MODEL_DESCRIPTION = 'Omit to use the default model.';
+const CURRENT_DESCRIPTION = 'Variables to return for the current time.';
+const MINUTELY_15_DESCRIPTION = 'Variables to return at 15-minute resolution.';
+const TEMPORAL_RESOLUTION_DESCRIPTION =
+  '"native" keeps each model\'s own time step; "hourly", "hourly_3" and "hourly_6" resample to 1, 3 or 6 hours.';
+
 // Geocoding schemas
 export const GeocodingParamsSchema = z
   .object({
-    name: z.string().min(2, 'Name must be at least 2 characters long'),
-    count: z.number().min(1).max(100).default(10).optional(),
-    language: z.string().optional(),
+    name: z
+      .string()
+      .min(2, 'Name must be at least 2 characters long')
+      .describe('Place name or postal code to search for.'),
+    count: z
+      .number()
+      .int()
+      .min(1)
+      .max(100)
+      .default(10)
+      .describe('Maximum number of results.')
+      .optional(),
+    language: z
+      .string()
+      .describe('Language of the returned place names (e.g. "fr"); default English.')
+      .optional(),
     countryCode: z
       .string()
       .regex(/^[A-Z]{2}$/, 'Country code must be an ISO-3166-1 alpha2 code (e.g. FR, DE, US)')
+      .describe('Only return places in this country.')
       .optional(),
     // The upstream API also offers protobuf, but tool responses are serialized as
     // JSON text, so only json can be forwarded.
@@ -503,17 +532,20 @@ export const EnsembleModelsSchema = z
 export const ForecastParamsSchema = CoordinateSchema.extend({
   hourly: HourlyVariablesSchema,
   daily: DailyVariablesSchema,
-  minutely_15: MinutelyVariablesSchema,
-  current_weather: z.boolean().optional(),
-  current: HourlyVariablesSchema,
+  minutely_15: MinutelyVariablesSchema.describe(MINUTELY_15_DESCRIPTION),
+  current_weather: z
+    .boolean()
+    .describe('Legacy current-conditions summary; prefer `current`.')
+    .optional(),
+  current: HourlyVariablesSchema.describe(CURRENT_DESCRIPTION),
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
   timeformat: TimeFormatSchema,
-  timezone: z.string().optional(),
+  timezone: TimezoneSchema.optional(),
   past_days: z.number().int().min(1).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
   past_hours: z.number().int().min(0).describe(PAST_HOURS_DESCRIPTION).optional(),
-  forecast_days: z.number().min(1).max(16).describe(FORECAST_DAYS_DESCRIPTION).optional(),
+  forecast_days: z.number().int().min(1).max(16).describe(FORECAST_DAYS_DESCRIPTION).optional(),
   forecast_hours: z.number().int().min(0).describe(FORECAST_HOURS_DESCRIPTION).optional(),
   start_date: DateStringSchema.optional(),
   end_date: DateStringSchema.optional(),
@@ -741,15 +773,15 @@ export const ArchiveModelsSchema = z
 export const ArchiveParamsSchema = CoordinateSchema.extend({
   hourly: ArchiveHourlyVariablesSchema,
   daily: ArchiveDailyVariablesSchema,
-  models: ArchiveModelsSchema,
+  models: ArchiveModelsSchema.describe(DEFAULT_MODEL_DESCRIPTION),
   start_date: DateStringSchema,
   end_date: DateStringSchema,
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
   timeformat: TimeFormatSchema,
-  timezone: z.string().optional(),
-  elevation: z.number().optional(),
+  timezone: TimezoneSchema.optional(),
+  elevation: z.number().describe(ELEVATION_DESCRIPTION).optional(),
   tilt: TiltSchema.optional(),
   azimuth: AzimuthSchema.optional(),
   cell_selection: CellSelectionSchema.optional(),
@@ -838,12 +870,17 @@ export const AirQualityCurrentVariablesSchema = z
 
 export const AirQualityParamsSchema = CoordinateSchema.extend({
   hourly: AirQualityVariablesSchema,
-  current: AirQualityCurrentVariablesSchema,
-  domains: z.enum(['auto', 'cams_europe', 'cams_global']).optional(),
-  timezone: z.string().optional(),
+  current: AirQualityCurrentVariablesSchema.describe(CURRENT_DESCRIPTION),
+  domains: z
+    .enum(['auto', 'cams_europe', 'cams_global'])
+    .describe(
+      '"cams_europe": higher resolution, Europe only. "cams_global": worldwide, coarser. "auto" (default) uses Europe where available.',
+    )
+    .optional(),
+  timezone: TimezoneSchema.optional(),
   timeformat: TimeFormatSchema,
-  past_days: z.number().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
-  forecast_days: z.number().min(0).max(7).describe(FORECAST_DAYS_DESCRIPTION).optional(),
+  past_days: z.number().int().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
+  forecast_days: z.number().int().min(0).max(7).describe(FORECAST_DAYS_DESCRIPTION).optional(),
   start_date: DateStringSchema.optional(),
   end_date: DateStringSchema.optional(),
 });
@@ -925,16 +962,16 @@ export const MarineModelsSchema = z
 export const MarineParamsSchema = CoordinateSchema.extend({
   hourly: MarineHourlyVariablesSchema,
   daily: MarineDailyVariablesSchema,
-  current: MarineHourlyVariablesSchema,
-  minutely_15: MarineMinutelyVariablesSchema,
-  models: MarineModelsSchema,
+  current: MarineHourlyVariablesSchema.describe(CURRENT_DESCRIPTION),
+  minutely_15: MarineMinutelyVariablesSchema.describe(MINUTELY_15_DESCRIPTION),
+  models: MarineModelsSchema.describe(DEFAULT_MODEL_DESCRIPTION),
   length_unit: z.enum(['metric', 'imperial']).optional(),
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
-  timezone: z.string().optional(),
+  timezone: TimezoneSchema.optional(),
   timeformat: TimeFormatSchema,
-  past_days: z.number().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
-  forecast_days: z.number().min(0).max(16).describe(FORECAST_DAYS_DESCRIPTION).optional(),
+  past_days: z.number().int().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
+  forecast_days: z.number().int().min(0).max(16).describe(FORECAST_DAYS_DESCRIPTION).optional(),
   start_date: DateStringSchema.optional(),
   end_date: DateStringSchema.optional(),
   cell_selection: CellSelectionSchema.optional(),
@@ -968,14 +1005,17 @@ export const FloodModelsSchema = z
 
 export const FloodParamsSchema = CoordinateSchema.extend({
   daily: FloodDailyVariablesSchema,
-  models: FloodModelsSchema,
-  timezone: z.string().optional(),
+  models: FloodModelsSchema.describe(DEFAULT_MODEL_DESCRIPTION),
+  timezone: TimezoneSchema.optional(),
   timeformat: TimeFormatSchema,
-  past_days: z.number().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
-  forecast_days: z.number().min(0).max(366).describe(FORECAST_DAYS_DESCRIPTION).optional(),
+  past_days: z.number().int().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
+  forecast_days: z.number().int().min(0).max(366).describe(FORECAST_DAYS_DESCRIPTION).optional(),
   start_date: DateStringSchema.optional(),
   end_date: DateStringSchema.optional(),
-  ensemble: z.boolean().optional(),
+  ensemble: z
+    .boolean()
+    .describe('Return all 50 ensemble members instead of a single series.')
+    .optional(),
   cell_selection: CellSelectionSchema.default('nearest').optional(),
 });
 
@@ -1133,6 +1173,7 @@ export const SeasonalParamsSchema = CoordinateSchema.extend({
         'temperature_min6h_2m_anomaly',
       ]),
     )
+    .describe('Weekly means and anomalies against climatology.')
     .optional(),
   monthly: z
     .array(
@@ -1212,15 +1253,16 @@ export const SeasonalParamsSchema = CoordinateSchema.extend({
         'snow_depth_anomaly',
       ]),
     )
+    .describe('Monthly means and anomalies against climatology.')
     .optional(),
   forecast_days: z.number().int().min(0).max(217).describe(FORECAST_DAYS_DESCRIPTION).optional(),
-  past_days: z.number().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
+  past_days: z.number().int().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
   start_date: DateStringSchema.optional(),
   end_date: DateStringSchema.optional(),
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
-  timezone: z.string().optional(),
+  timezone: TimezoneSchema.optional(),
   timeformat: TimeFormatSchema,
   cell_selection: CellSelectionSchema.optional(),
   models: z
@@ -1233,6 +1275,7 @@ export const SeasonalParamsSchema = CoordinateSchema.extend({
       'ecmwf_seas5_ensemble_mean',
       'ecmwf_ec46_ensemble_mean',
     ])
+    .describe(DEFAULT_MODEL_DESCRIPTION)
     .optional(),
 });
 
@@ -1295,12 +1338,15 @@ export const ClimateParamsSchema = CoordinateSchema.extend({
     .optional(),
   start_date: DateStringSchema,
   end_date: DateStringSchema,
-  models: ClimateModelsSchema.optional(),
+  models: ClimateModelsSchema.describe(DEFAULT_MODEL_DESCRIPTION).optional(),
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
-  disable_bias_correction: z.boolean().optional(),
-  timezone: z.string().optional(),
+  disable_bias_correction: z
+    .boolean()
+    .describe('Return raw model output instead of bias-corrected values.')
+    .optional(),
+  timezone: TimezoneSchema.optional(),
   timeformat: TimeFormatSchema,
   cell_selection: CellSelectionSchema.optional(),
 }).refine((data) => data.start_date <= data.end_date, {
@@ -1414,12 +1460,12 @@ export const EnsembleParamsSchema = CoordinateSchema.extend({
       ]),
     )
     .optional(),
-  forecast_days: z.number().min(0).max(36).describe(FORECAST_DAYS_DESCRIPTION).optional(),
+  forecast_days: z.number().int().min(0).max(36).describe(FORECAST_DAYS_DESCRIPTION).optional(),
   temperature_unit: TemperatureUnitSchema,
   wind_speed_unit: WindSpeedUnitSchema,
   precipitation_unit: PrecipitationUnitSchema,
-  timezone: z.string().optional(),
-  elevation: z.number().optional(),
+  timezone: TimezoneSchema.optional(),
+  elevation: z.number().describe(ELEVATION_DESCRIPTION).optional(),
   timeformat: TimeFormatSchema,
   past_days: z.number().int().min(0).max(92).describe(PAST_DAYS_DESCRIPTION).optional(),
   past_hours: z.number().int().min(0).describe(PAST_HOURS_DESCRIPTION).optional(),
@@ -1429,7 +1475,10 @@ export const EnsembleParamsSchema = CoordinateSchema.extend({
   tilt: TiltSchema.optional(),
   azimuth: AzimuthSchema.optional(),
   cell_selection: CellSelectionSchema.optional(),
-  temporal_resolution: z.enum(['native', 'hourly', 'hourly_3', 'hourly_6']).optional(),
+  temporal_resolution: z
+    .enum(['native', 'hourly', 'hourly_3', 'hourly_6'])
+    .describe(TEMPORAL_RESOLUTION_DESCRIPTION)
+    .optional(),
 });
 
 // Elevation parameters — the API supports batch lookups via comma-separated
