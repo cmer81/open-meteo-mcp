@@ -173,3 +173,40 @@ describe('OpenMeteoClient response size limits', () => {
     );
   });
 });
+
+describe('OpenMeteoClient cancellation', () => {
+  it('forwards the abort signal to the HTTP request', async () => {
+    const client = new OpenMeteoClient();
+    const get = vi
+      .spyOn((client as unknown as { client: { get: unknown } }).client, 'get')
+      .mockResolvedValueOnce({ data: { latitude: 1, longitude: 1 } } as never);
+    const controller = new AbortController();
+
+    await client.getForecast({ latitude: 1, longitude: 1 }, controller.signal);
+
+    expect(get).toHaveBeenCalledWith(
+      '/v1/forecast',
+      expect.objectContaining({ signal: controller.signal }),
+    );
+  });
+
+  it('abandons an in-flight request when the signal aborts', async () => {
+    // A real socket that never answers: without the signal, axios would wait
+    // for its 30 s timeout.
+    const { createServer } = await import('node:http');
+    const server = createServer(() => {});
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address() as { port: number };
+    const client = new OpenMeteoClient(`http://127.0.0.1:${port}`);
+    const controller = new AbortController();
+
+    const started = Date.now();
+    const pending = client.getForecast({ latitude: 1, longitude: 1 }, controller.signal);
+    setTimeout(() => controller.abort(), 50);
+
+    await expect(pending).rejects.toThrow();
+    expect(Date.now() - started).toBeLessThan(2_000);
+    server.closeAllConnections();
+    server.close();
+  });
+});

@@ -4,35 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createAuthMiddleware,
   createRateLimiter,
-  generateSessionId,
   getClientIp,
   isAnthropicEgressIp,
 } from './security.js';
-
-// ---------------------------------------------------------------------------
-// generateSessionId
-// ---------------------------------------------------------------------------
-
-describe('generateSessionId', () => {
-  it('returns a valid UUID v4', () => {
-    const id = generateSessionId();
-    expect(id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
-  });
-
-  it('generates unique IDs across 1000 calls', () => {
-    const ids = new Set(Array.from({ length: 1000 }, () => generateSessionId()));
-    expect(ids.size).toBe(1000);
-  });
-
-  it('does not use Math.random (output is not predictable from timestamp)', () => {
-    // crypto.randomUUID produces RFC 4122 v4 — the version nibble is always '4'
-    // and the variant nibble is always 8, 9, a, or b.
-    const id = generateSessionId();
-    const parts = id.split('-');
-    expect(parts[2]?.charAt(0)).toBe('4'); // version nibble
-    expect(['8', '9', 'a', 'b']).toContain(parts[3]?.charAt(0)); // variant nibble
-  });
-});
 
 // ---------------------------------------------------------------------------
 // createAuthMiddleware
@@ -121,6 +95,16 @@ describe('createAuthMiddleware', () => {
 
       expect(next).toHaveBeenCalledOnce();
       expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it('rejects a key that is a prefix of the real one', () => {
+      // Guards the length handling of the constant-time comparison.
+      const req = makeReq({ 'x-api-key': 'secret' });
+      const res = makeRes();
+      const next = vi.fn();
+      createAuthMiddleware()(req as Request, res as unknown as Response, next as NextFunction);
+      expect(next).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(401);
     });
 
     it('calls next() when X-API-Key header is correct', () => {

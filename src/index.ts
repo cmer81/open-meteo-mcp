@@ -92,6 +92,24 @@ function log(
   );
 }
 
+// Tool arguments carry the user's location. Logs keep one decimal (~11 km),
+// enough to debug a regional model queried outside its domain without
+// recording where someone is. Also applies to elevation's coordinate arrays.
+export function redactCoordinates(args: unknown): unknown {
+  if (!args || typeof args !== 'object') return args;
+  const round = (value: unknown): unknown =>
+    typeof value === 'number'
+      ? Math.round(value * 10) / 10
+      : Array.isArray(value)
+        ? value.map(round)
+        : value;
+  const redacted: Record<string, unknown> = { ...(args as Record<string, unknown>) };
+  for (const key of ['latitude', 'longitude']) {
+    if (key in redacted) redacted[key] = round(redacted[key]);
+  }
+  return redacted;
+}
+
 export class OpenMeteoMCPServer {
   private client: OpenMeteoClient;
 
@@ -114,7 +132,10 @@ export class OpenMeteoMCPServer {
     server: McpServer,
     meta: ToolDefinition,
     schema: z.ZodTypeAny,
-    handler: (params: never) => Promise<unknown>,
+    // `signal` aborts when the client cancels the call or the connection closes,
+    // so the upstream Open-Meteo request is dropped instead of running on for
+    // up to its 30 s timeout with nobody waiting.
+    handler: (params: never, signal: AbortSignal) => Promise<unknown>,
   ): void {
     const registerToolUntyped = server.registerTool.bind(server) as (
       name: string,
@@ -139,9 +160,9 @@ export class OpenMeteoMCPServer {
         inputSchema: schema,
         annotations: meta.annotations,
       },
-      async (params: never) => {
+      async (params: never, extra: { signal: AbortSignal }) => {
         const start = Date.now();
-        log('info', 'tool_call', { tool: meta.name, args: params });
+        log('info', 'tool_call', { tool: meta.name, args: redactCoordinates(params) });
 
         // The SDK now validates against the same schema before dispatching, so
         // this rarely rejects anything. It is kept because it is what applies
@@ -158,7 +179,7 @@ export class OpenMeteoMCPServer {
         }
 
         try {
-          const result = await handler(refined.data as never);
+          const result = await handler(refined.data as never, extra.signal);
           const responseText = serializeToolResponse(result);
           log('info', 'tool_success', {
             tool: meta.name,
@@ -197,94 +218,103 @@ export class OpenMeteoMCPServer {
       server,
       WEATHER_FORECAST_TOOL,
       ForecastParamsSchema,
-      (params: ForecastParams) => this.client.getForecast(params),
+      (params: ForecastParams, signal) => this.client.getForecast(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       WEATHER_ARCHIVE_TOOL,
       ArchiveParamsSchema,
-      (params: ArchiveParams) => this.client.getArchive(params),
+      (params: ArchiveParams, signal) => this.client.getArchive(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       AIR_QUALITY_TOOL,
       AirQualityParamsSchema,
-      (params: AirQualityParams) => this.client.getAirQuality(params),
+      (params: AirQualityParams, signal) => this.client.getAirQuality(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       MARINE_WEATHER_TOOL,
       MarineParamsSchema,
-      (params: MarineParams) => this.client.getMarine(params),
+      (params: MarineParams, signal) => this.client.getMarine(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       ELEVATION_TOOL,
       ElevationParamsSchema,
-      (params: ElevationParams) => this.client.getElevation(params),
+      (params: ElevationParams, signal) => this.client.getElevation(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       FLOOD_FORECAST_TOOL,
       FloodParamsSchema,
-      (params: FloodParams) => this.client.getFlood(params),
+      (params: FloodParams, signal) => this.client.getFlood(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       GEOCODING_TOOL,
       GeocodingParamsSchema,
-      (params: GeocodingParams) => this.client.getGeocoding(params),
+      (params: GeocodingParams, signal) => this.client.getGeocoding(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       DWD_ICON_FORECAST_TOOL,
       DwdIconParamsSchema,
-      (params: DwdIconParams) => this.client.getDwdIcon(params),
+      (params: DwdIconParams, signal) => this.client.getDwdIcon(params, signal),
     );
-    this.registerReadOnlyTool(server, GFS_FORECAST_TOOL, GfsParamsSchema, (params: GfsParams) =>
-      this.client.getGfs(params),
+    this.registerReadOnlyTool(
+      server,
+      GFS_FORECAST_TOOL,
+      GfsParamsSchema,
+      (params: GfsParams, signal) => this.client.getGfs(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       METEOFRANCE_FORECAST_TOOL,
       MeteoFranceParamsSchema,
-      (params: MeteoFranceParams) => this.client.getMeteoFrance(params),
+      (params: MeteoFranceParams, signal) => this.client.getMeteoFrance(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       ECMWF_FORECAST_TOOL,
       EcmwfParamsSchema,
-      (params: EcmwfParams) => this.client.getEcmwf(params),
+      (params: EcmwfParams, signal) => this.client.getEcmwf(params, signal),
     );
-    this.registerReadOnlyTool(server, JMA_FORECAST_TOOL, JmaParamsSchema, (params: JmaParams) =>
-      this.client.getJma(params),
+    this.registerReadOnlyTool(
+      server,
+      JMA_FORECAST_TOOL,
+      JmaParamsSchema,
+      (params: JmaParams, signal) => this.client.getJma(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       METNO_FORECAST_TOOL,
       MetnoParamsSchema,
-      (params: MetnoParams) => this.client.getMetno(params),
+      (params: MetnoParams, signal) => this.client.getMetno(params, signal),
     );
-    this.registerReadOnlyTool(server, GEM_FORECAST_TOOL, GemParamsSchema, (params: GemParams) =>
-      this.client.getGem(params),
+    this.registerReadOnlyTool(
+      server,
+      GEM_FORECAST_TOOL,
+      GemParamsSchema,
+      (params: GemParams, signal) => this.client.getGem(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       SEASONAL_FORECAST_TOOL,
       SeasonalParamsSchema,
-      (params: SeasonalParams) => this.client.getSeasonal(params),
+      (params: SeasonalParams, signal) => this.client.getSeasonal(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       CLIMATE_PROJECTION_TOOL,
       ClimateParamsSchema,
-      (params: ClimateParams) => this.client.getClimate(params),
+      (params: ClimateParams, signal) => this.client.getClimate(params, signal),
     );
     this.registerReadOnlyTool(
       server,
       ENSEMBLE_FORECAST_TOOL,
       EnsembleParamsSchema,
-      (params: EnsembleParams) => this.client.getEnsemble(params),
+      (params: EnsembleParams, signal) => this.client.getEnsemble(params, signal),
     );
 
     return server;

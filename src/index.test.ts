@@ -2,7 +2,7 @@ import type express from 'express';
 import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OpenMeteoClient } from './client.js';
-import { OpenMeteoMCPServer } from './index.js';
+import { OpenMeteoMCPServer, redactCoordinates } from './index.js';
 import { SERVER_INSTRUCTIONS } from './instructions.js';
 import { ALL_TOOLS } from './tools.js';
 import { CHARACTER_LIMIT } from './truncation.js';
@@ -253,14 +253,18 @@ describe('Full protocol round trip via McpServer#registerTool', () => {
     expect(JSON.parse(content).hourly.temperature_2m).toEqual([5]);
     // Confirms the SDK validates via our Zod schema (applying its .default()s)
     // before invoking the handler, not just passing raw arguments through.
-    expect(client.getForecast).toHaveBeenCalledWith({
-      latitude: 48.85,
-      longitude: 2.35,
-      temperature_unit: 'celsius',
-      wind_speed_unit: 'kmh',
-      precipitation_unit: 'mm',
-      timeformat: 'iso8601',
-    });
+    expect(client.getForecast).toHaveBeenCalledWith(
+      {
+        latitude: 48.85,
+        longitude: 2.35,
+        temperature_unit: 'celsius',
+        wind_speed_unit: 'kmh',
+        precipitation_unit: 'mm',
+        timeformat: 'iso8601',
+      },
+      // The request's abort signal, so a cancelled call drops the upstream fetch.
+      expect.any(AbortSignal),
+    );
   });
 
   it('sends server instructions naming every tool in the initialize result', async () => {
@@ -486,5 +490,30 @@ describe('HTTP transport security', () => {
         .send(initBody);
       expect(res.status).toBe(200);
     });
+  });
+});
+
+describe('redactCoordinates', () => {
+  it('keeps one decimal of latitude and longitude', () => {
+    expect(
+      redactCoordinates({ latitude: 48.85661, longitude: 2.35222, hourly: ['temperature_2m'] }),
+    ).toEqual({
+      latitude: 48.9,
+      longitude: 2.4,
+      hourly: ['temperature_2m'],
+    });
+  });
+
+  it("rounds elevation's coordinate arrays element by element", () => {
+    expect(
+      redactCoordinates({ latitude: [48.8566, -33.8688], longitude: [2.3522, 151.2093] }),
+    ).toEqual({
+      latitude: [48.9, -33.9],
+      longitude: [2.4, 151.2],
+    });
+  });
+
+  it('leaves arguments without coordinates untouched', () => {
+    expect(redactCoordinates({ name: 'Paris', count: 5 })).toEqual({ name: 'Paris', count: 5 });
   });
 });

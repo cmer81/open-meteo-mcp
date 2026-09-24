@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [Unreleased]
+
+### Changed
+
+- **Cancelled tool calls stop their Open-Meteo request.** The MCP request's
+  abort signal (client cancellation, or the connection closing) is passed to
+  axios, instead of letting the upstream request run for up to its 30 s
+  timeout with nobody waiting.
+- **Logs no longer record exact user locations.** `tool_call` log entries keep
+  latitude/longitude to one decimal (~11 km).
+- **The API key is compared in constant time** (`timingSafeEqual` over SHA-256
+  digests), so response timing no longer leaks how much of a guessed key is
+  right, or its length.
+
+### Removed
+
+- `generateSessionId` from `security.ts`, unused since the HTTP transport
+  became stateless in 2.4.0.
+
 ## [2.4.1] - 2026-09-25
 
 ### Changed
@@ -300,6 +319,7 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[Unreleased]: https://github.com/cmer81/open-meteo-mcp/compare/v2.4.1...HEAD
 [2.4.1]: https://github.com/cmer81/open-meteo-mcp/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.3.2...v2.4.0
 [2.3.2]: https://github.com/cmer81/open-meteo-mcp/compare/v2.3.1...v2.3.2

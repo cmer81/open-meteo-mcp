@@ -1,14 +1,7 @@
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { BlockList, isIPv4 } from 'node:net';
 import type { NextFunction, Request, Response } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
-
-/**
- * Generates a cryptographically secure session ID using the Web Crypto API
- * (built-in since Node.js 14.17). Never use Math.random() for session IDs.
- */
-export function generateSessionId(): string {
-  return crypto.randomUUID();
-}
 
 /**
  * Express middleware that enforces API key authentication when the API_KEY
@@ -19,6 +12,15 @@ export function generateSessionId(): string {
  *   - Authorization: Bearer <key>
  *   - X-API-Key: <key>
  */
+// `===` returns as soon as a character differs, so response timing leaks how
+// much of a guessed key is right. Hashing first gives timingSafeEqual two
+// equal-length inputs, so the key's length does not leak either.
+function keyMatches(candidate: string | undefined, apiKey: string): boolean {
+  if (candidate === undefined) return false;
+  const digest = (value: string) => createHash('sha256').update(value).digest();
+  return timingSafeEqual(digest(candidate), digest(apiKey));
+}
+
 export function createAuthMiddleware() {
   return (req: Request, res: Response, next: NextFunction): void => {
     const apiKey = process.env.API_KEY;
@@ -34,7 +36,7 @@ export function createAuthMiddleware() {
       : undefined;
     const headerKey = req.headers['x-api-key'] as string | undefined;
 
-    if (bearer === apiKey || headerKey === apiKey) {
+    if (keyMatches(bearer, apiKey) || keyMatches(headerKey, apiKey)) {
       next();
       return;
     }

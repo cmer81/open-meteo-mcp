@@ -167,7 +167,7 @@ The `buildParams` method in `OpenMeteoClient` handles parameter serialization:
 
 ### Error Handling
 - Zod schema validation for all inputs with detailed error messages
-- Axios timeout configuration (30 seconds)
+- Axios timeout configuration (30 seconds); each tool call also passes the MCP request's abort signal to axios, so a cancelled call or closed connection drops the upstream request
 - Comprehensive error catching in MCP tool handlers
 - Proper User-Agent headers for API identification
 
