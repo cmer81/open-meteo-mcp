@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [2.5.0] - 2026-09-26
+
+### Added
+
+- **Open-Meteo responses are cached in memory.** Identical requests are served
+  from an LRU cache until a per-endpoint TTL expires: 15 minutes for forecasts
+  and ensembles, 30 minutes for air quality and marine, 1 hour for flood,
+  6 hours for seasonal, 24 hours for archive and climate, 7 days for geocoding
+  and 30 days for elevation. Archive ranges ending within the last 5 days are
+  kept for only 1 hour, since the archive is still backfilling them. Failures
+  are never cached. The cache is bounded by bytes, set with
+  `OPEN_METEO_CACHE_MAX_BYTES` (default 20000000, about 50 MB of heap; `0`
+  disables it). Contributed by @BouazizOmar in #66.
+
 ## [2.4.2] - 2026-09-25
 
 ### Changed
@@ -319,6 +333,7 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[2.5.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/cmer81/open-meteo-mcp/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/cmer81/open-meteo-mcp/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.3.2...v2.4.0
