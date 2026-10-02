@@ -524,9 +524,13 @@ const EnsembleModelEnum = z.enum([
 
 // The live /v1/ensemble API accepts a comma-separated list of models (verified),
 // so this accepts either a single model or an array of models.
+// Required: with no `models`, /v1/ensemble falls back to best_match and rejects
+// the request ("Model 'best_match' is not supported by the Ensemble API").
 export const EnsembleModelsSchema = z
   .union([EnsembleModelEnum, z.array(EnsembleModelEnum)])
-  .optional();
+  .describe(
+    'Required: the ensemble API has no default model. Use e.g. "icon_seamless_eps" or "ncep_gefs_seamless".',
+  );
 
 // Forecast parameters schema
 export const ForecastParamsSchema = CoordinateSchema.extend({

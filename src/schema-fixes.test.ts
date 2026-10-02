@@ -136,6 +136,15 @@ describe('Fix 3: EnsembleModelsSchema accepts a single model or an array of mode
     });
     expect(result.success).toBe(true);
   });
+
+  it('should require models (the live /v1/ensemble API rejects requests without one)', () => {
+    const result = EnsembleParamsSchema.safeParse({
+      latitude: 48.8566,
+      longitude: 2.3522,
+      hourly: ['temperature_2m'],
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe('Fix 5: EnsembleModelsSchema correct API model names', () => {
@@ -268,7 +277,10 @@ describe('Fix 6: pressure-level variables published as a pattern, not ~130 enum 
   it('accepts every ensemble pressure-level combination', () => {
     const vars = combos(ensembleBases);
     expect(vars).toHaveLength(114);
-    expect(EnsembleParamsSchema.safeParse({ ...base, hourly: vars }).success).toBe(true);
+    expect(
+      EnsembleParamsSchema.safeParse({ ...base, models: 'icon_seamless_eps', hourly: vars })
+        .success,
+    ).toBe(true);
   });
 
   it.each([
