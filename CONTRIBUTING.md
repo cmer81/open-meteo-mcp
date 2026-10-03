@@ -52,7 +52,7 @@ A tool touches several files, and some of them are checked by tests:
 - **HTTP middleware**: guards (origin check, rate limiting, auth) must be registered before the `/mcp` routes they protect.
 - **SDK or Zod upgrades**: run `npm run smoke`. It is the only check that catches a tool publishing an empty input schema, which no unit test detects.
 
-`CLAUDE.md` describes the architecture and these invariants in more detail.
+`AGENTS.md` describes the architecture and these invariants in more detail.
 
 ## Releases
 
