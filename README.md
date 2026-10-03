@@ -227,3 +227,5 @@ npm run eval -- --no-server-instructions   # baseline without the server instruc
 
 > [!WARNING]
 > The evaluation calls the real Anthropic API for every question and consumes credits. It is a manual check, not part of CI.
+
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).
