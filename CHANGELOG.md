@@ -8,6 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [Unreleased]
+
+### Fixed
+
+- **`ensemble_forecast` requires `models`.** The ensemble API has no default
+  model: a request without one fell back to `best_match` and was rejected
+  ("Model 'best_match' is not supported by the Ensemble API"), yet the schema
+  marked `models` optional, so clients had no way to know they must send it.
+  It is now listed under `required` in the published schema, and a call
+  without it fails validation up front. An empty array is rejected too, since
+  it was sent as `models=` and answered with a misleading "No data is
+  available for this location". Reported and fixed by @vishalhabib99 in #81;
+  follow-up in #82.
+
 ## [2.5.0] - 2026-09-26
 
 ### Added
