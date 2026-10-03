@@ -17,3 +17,8 @@ updates:
       # Upgrades of @modelcontextprotocol/sdk or zod need `npm run build && npm run smoke` (see AGENTS.md).
       npm-minor-patch:
         update-types: [minor, patch]
+    ignore:
+      # Must track the lowest supported Node (engines: >=22), or tsc accepts
+      # APIs that crash on it. Bump by hand when the minimum Node is raised.
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
