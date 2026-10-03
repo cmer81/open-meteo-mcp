@@ -70,7 +70,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.13",
     "@types/express": "^5.0.6",
-    "@types/node": "^22.20.3",
+    "@types/node": "^26.6.3",
     "@types/supertest": "^7.2.1",
     "supertest": "^7.2.2",
     "tsx": "^4.23.13",
