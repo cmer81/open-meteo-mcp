@@ -1,75 +1,46 @@
+<!-- prettier-ignore -->
+<div align="center">
+
 # Open-Meteo MCP Server
 
-[![npm version](https://badge.fury.io/js/open-meteo-mcp-server.svg)](https://badge.fury.io/js/open-meteo-mcp-server)
-[![GitHub release](https://img.shields.io/github/release/cmer81/open-meteo-mcp.svg)](https://github.com/cmer81/open-meteo-mcp/releases)
-[![Docker Image](https://img.shields.io/badge/docker-ghcr.io-blue.svg)](https://github.com/cmer81/open-meteo-mcp/pkgs/container/open-meteo-mcp)
+*Give any LLM accurate weather data: forecasts, history back to 1940, air quality, marine conditions, floods and climate projections.*
 
-A comprehensive [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that provides access to Open-Meteo weather APIs for use with Large Language Models.
+[![npm version](https://img.shields.io/npm/v/open-meteo-mcp-server?style=flat-square)](https://www.npmjs.com/package/open-meteo-mcp-server)
+[![CI](https://img.shields.io/github/actions/workflow/status/cmer81/open-meteo-mcp/ci.yml?style=flat-square&label=CI)](https://github.com/cmer81/open-meteo-mcp/actions)
+[![Docker image](https://img.shields.io/badge/docker-ghcr.io-2496ed?style=flat-square&logo=docker&logoColor=white)](https://github.com/cmer81/open-meteo-mcp/pkgs/container/open-meteo-mcp)
+[![Node.js](https://img.shields.io/badge/Node.js->=22-3c873a?style=flat-square)](https://nodejs.org)
+[![License](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
+
+[Features](#features) • [Getting started](#getting-started) • [Tools](#tools) • [Remote deployment](#remote-deployment) • [Configuration](#configuration) • [Development](#development)
+
+</div>
+
+A [Model Context Protocol](https://modelcontextprotocol.io) server for the free [Open-Meteo](https://open-meteo.com) APIs. Plug it into Claude Desktop, Claude Code or any MCP client, then ask in plain language:
+
+```
+What were the temperatures in London during January 2023?
+Compare the ICON and GFS ensemble forecasts for Berlin over the next 5 days.
+Give me the current European AQI, UV index and pollen levels in Paris.
+```
+
+No API key is needed: Open-Meteo is free for non-commercial use.
 
 ## Features
 
-This MCP server provides complete access to Open-Meteo APIs, including:
+- **17 tools** covering forecasts, ERA5 history, air quality, marine, flood, seasonal, ensemble and CMIP6 climate data, plus geocoding and elevation
+- **Model-specific forecasts** from DWD ICON, NOAA GFS, Météo-France, ECMWF, JMA, MET Norway and Environment Canada GEM
+- **Built for LLMs**: strict input schemas, server instructions that tell the model which tool answers which question, compact JSON responses capped at 25,000 characters
+- **Two transports**: stdio for local clients, stateless Streamable HTTP for remote deployments, with API key auth, rate limiting and origin checks
+- **In-memory response cache** with per-endpoint TTLs, so repeated questions don't hit Open-Meteo again
+- **Self-hosting friendly**: every Open-Meteo endpoint can point at your own instance
 
-### Core Weather APIs
-- **Weather Forecast** (`weather_forecast`) - Forecasts up to 16 days (7 by default) with hourly and daily resolution
-- **Weather Archive** (`weather_archive`) - Historical ERA5 data from 1940 to present
-- **Air Quality** (`air_quality`) - PM2.5, PM10, ozone, nitrogen dioxide, pollen, European/US AQI indices, UV index and other pollutants
-- **Marine Weather** (`marine_weather`) - Wave height, wave period, wave direction and sea surface temperature
-- **Elevation** (`elevation`) - Digital elevation model data for given coordinates
-- **Geocoding** (`geocoding`) - Search locations worldwide by name or postal code, get coordinates and detailed location information
+## Getting started
 
-### Specialized Weather Models
-- **DWD ICON** (`dwd_icon_forecast`) - German weather service high-resolution model for Europe
-- **NOAA GFS** (`gfs_forecast`) - US weather service global model with high-resolution North America data
-- **Météo-France** (`meteofrance_forecast`) - French weather service AROME and ARPEGE models
-- **ECMWF** (`ecmwf_forecast`) - European Centre for Medium-Range Weather Forecasts
-- **JMA** (`jma_forecast`) - Japan Meteorological Agency high-resolution model for Asia
-- **MET Norway** (`metno_forecast`) - Norwegian weather service for Nordic countries
-- **Environment Canada GEM** (`gem_forecast`) - Canadian weather service model
+You need [Node.js](https://nodejs.org) 22 or later. Nothing to install beforehand: `npx` fetches the server on first run.
 
-### Advanced Forecasting Tools
-- **Flood Forecast** (`flood_forecast`) - River discharge and flood forecasts from GloFAS (Global Flood Awareness System)
-- **Seasonal Forecast** (`seasonal_forecast`) - Long-range forecasts up to ~7 months ahead
-- **Climate Projections** (`climate_projection`) - CMIP6 climate change projections for different warming scenarios
-- **Ensemble Forecast** (`ensemble_forecast`) - Multiple model runs showing forecast uncertainty
+### Claude Desktop
 
-## Installation
-
-### Requirements
-
-- Node.js >= 22.0.0
-
-### Method 1: Using npx (Recommended)
-
-No installation required! The server will run directly via npx.
-
-### Method 2: Global Installation via npm
-
-```bash
-npm install -g open-meteo-mcp-server
-```
-
-### Method 3: From Source (Development)
-
-```bash
-# Clone the repository
-git clone https://github.com/cmer81/open-meteo-mcp.git
-cd open-meteo-mcp
-
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-```
-
-## Configuration
-
-### Claude Desktop Configuration
-
-#### Simple Configuration (Recommended)
-
-Add the following configuration to your Claude Desktop config file:
+Add the server to your `claude_desktop_config.json`:
 
 ```json
 {
@@ -82,569 +53,177 @@ Add the following configuration to your Claude Desktop config file:
 }
 ```
 
-#### Full Configuration (with environment variables)
-
-```json
-{
-  "mcpServers": {
-    "open-meteo": {
-      "command": "npx",
-      "args": ["-y", "-p", "open-meteo-mcp-server", "open-meteo-mcp-server"],
-      "env": {
-        "OPEN_METEO_API_URL": "https://api.open-meteo.com",
-        "OPEN_METEO_AIR_QUALITY_API_URL": "https://air-quality-api.open-meteo.com",
-        "OPEN_METEO_MARINE_API_URL": "https://marine-api.open-meteo.com",
-        "OPEN_METEO_ARCHIVE_API_URL": "https://archive-api.open-meteo.com",
-        "OPEN_METEO_SEASONAL_API_URL": "https://seasonal-api.open-meteo.com",
-        "OPEN_METEO_ENSEMBLE_API_URL": "https://ensemble-api.open-meteo.com",
-        "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.open-meteo.com",
-        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.open-meteo.com",
-        "OPEN_METEO_CLIMATE_API_URL": "https://climate-api.open-meteo.com"
-      }
-    }
-  }
-}
-```
-
-#### Local Development Configuration
-
-If you're developing locally or installed from source:
-
-```json
-{
-  "mcpServers": {
-    "open-meteo": {
-      "command": "node",
-      "args": ["/path/to/open-meteo-mcp/dist/index.js"],
-      "env": {
-        "OPEN_METEO_API_URL": "https://api.open-meteo.com",
-        "OPEN_METEO_AIR_QUALITY_API_URL": "https://air-quality-api.open-meteo.com",
-        "OPEN_METEO_MARINE_API_URL": "https://marine-api.open-meteo.com",
-        "OPEN_METEO_ARCHIVE_API_URL": "https://archive-api.open-meteo.com",
-        "OPEN_METEO_SEASONAL_API_URL": "https://seasonal-api.open-meteo.com",
-        "OPEN_METEO_ENSEMBLE_API_URL": "https://ensemble-api.open-meteo.com",
-        "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.open-meteo.com",
-        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.open-meteo.com",
-        "OPEN_METEO_CLIMATE_API_URL": "https://climate-api.open-meteo.com"
-      }
-    }
-  }
-}
-```
-
-### Custom Instance Configuration
-
-If you're using your own Open-Meteo instance:
-
-```json
-{
-  "mcpServers": {
-    "open-meteo": {
-      "command": "npx",
-      "args": ["-y", "-p", "open-meteo-mcp-server", "open-meteo-mcp-server"],
-      "env": {
-        "OPEN_METEO_API_URL": "https://your-meteo-api.example.com",
-        "OPEN_METEO_AIR_QUALITY_API_URL": "https://air-quality-api.example.com",
-        "OPEN_METEO_MARINE_API_URL": "https://marine-api.example.com",
-        "OPEN_METEO_ARCHIVE_API_URL": "https://archive-api.example.com",
-        "OPEN_METEO_SEASONAL_API_URL": "https://seasonal-api.example.com",
-        "OPEN_METEO_ENSEMBLE_API_URL": "https://ensemble-api.example.com",
-        "OPEN_METEO_GEOCODING_API_URL": "https://geocoding-api.example.com",
-        "OPEN_METEO_FLOOD_API_URL": "https://flood-api.example.com",
-        "OPEN_METEO_CLIMATE_API_URL": "https://climate-api.example.com"
-      }
-    }
-  }
-}
-```
-
-### Streamable HTTP Transport
-
-The server also supports Streamable HTTP transport for remote deployments. Set the `TRANSPORT` environment variable to `http`:
+### Claude Code
 
 ```bash
-TRANSPORT=http PORT=3000 npx open-meteo-mcp-server
+claude mcp add open-meteo -- npx -y -p open-meteo-mcp-server open-meteo-mcp-server
 ```
 
-This starts an Express server on the specified port (default: 3000) with the MCP endpoint at `/mcp`. The HTTP transport is stateless: each `POST /mcp` is handled on its own, no session ID is issued, and `GET`/`DELETE /mcp` answer `405`. No tool keeps state between calls, so clients lose nothing, and there is no session table for one client to fill up.
+### Other MCP clients
 
-> **The server binds to `127.0.0.1` by default**, so it is reachable only from the local machine. To accept connections from other hosts, set `HOST=0.0.0.0` explicitly. The Docker image already does this, so published ports work without extra configuration.
+Any client that launches stdio servers works with the same command: `npx -y -p open-meteo-mcp-server open-meteo-mcp-server`. You can also install it globally with `npm install -g open-meteo-mcp-server` and run `open-meteo-mcp-server`.
 
-For production deployments, bind to a reachable interface and enable authentication and rate limiting:
+> [!TIP]
+> Every data tool takes coordinates. Ask with a place name and the model will call `geocoding` first to resolve it.
+
+## Tools
+
+| Category | Tool | What it answers |
+|---|---|---|
+| **Core** | `weather_forecast` | Forecast up to 16 days, picking the best model for the location. Recent past via `past_days` (up to 92) |
+| | `weather_archive` | Historical weather from 1940 to yesterday (ERA5 reanalysis) |
+| | `air_quality` | PM2.5, PM10, ozone, NO₂, pollen, European and US AQI, UV index |
+| | `marine_weather` | Wave height, period and direction, swell, sea surface temperature |
+| | `geocoding` | Place name or postal code to coordinates |
+| | `elevation` | Terrain height for coordinates |
+| **Models** | `dwd_icon_forecast` | DWD ICON (Germany, high resolution over Europe) |
+| | `gfs_forecast` | NOAA GFS (global, high resolution over North America) |
+| | `meteofrance_forecast` | Météo-France AROME and ARPEGE |
+| | `ecmwf_forecast` | ECMWF IFS and AIFS |
+| | `jma_forecast` | Japan Meteorological Agency |
+| | `metno_forecast` | MET Norway (Nordic countries) |
+| | `gem_forecast` | Environment Canada GEM |
+| **Advanced** | `ensemble_forecast` | Forecast uncertainty across ensemble members. `models` is required |
+| | `seasonal_forecast` | Outlook from a few weeks to about 7 months ahead |
+| | `climate_projection` | CMIP6 climate projections, 1950 to 2050 |
+| | `flood_forecast` | River discharge from GloFAS |
+
+`weather_forecast` is the default choice. The model-specific tools are for when a particular model is asked for, or to compare models with one call each.
+
+### Responses
+
+- Times are GMT unless `timezone` is set. `timezone: "auto"` uses the location's local time.
+- `null` in a series means the model has no value for that time, not zero.
+- Responses over 25,000 characters have their `hourly` / `daily` / `minutely_15` arrays shortened by the same ratio, keeping series aligned, and gain `truncated: true` with a `truncation_message`. Narrow the date range or the variables to get everything.
+
+The full list of variables and parameters is in each tool's input schema and in the [Open-Meteo documentation](https://open-meteo.com/en/docs).
+
+## Remote deployment
+
+Set `TRANSPORT=http` to serve MCP over Streamable HTTP at `/mcp` instead of stdio:
 
 ```bash
-HOST=0.0.0.0 API_KEY=your-secret-key RATE_LIMIT_RPM=60 TRANSPORT=http PORT=3000 npx open-meteo-mcp-server
+TRANSPORT=http HOST=0.0.0.0 PORT=3000 API_KEY=your-secret-key npx open-meteo-mcp-server
 ```
 
-If a browser-based client connects to the server, list its origin in `ALLOWED_ORIGINS` — requests carrying an unlisted `Origin` header are rejected with `403` as DNS rebinding protection.
+Clients then send the key with every request, as `Authorization: Bearer <key>` or `X-API-Key: <key>`. `GET /health` answers `{"status":"ok"}` without a key, for container probes.
 
-Clients must then include the key in every request:
-```
-Authorization: Bearer your-secret-key
-# or
-X-API-Key: your-secret-key
-```
+The transport is stateless: each `POST /mcp` is handled on its own, no session ID is issued, and `GET` / `DELETE /mcp` answer `405`. No tool keeps state between calls, so clients lose nothing.
 
-#### Using npm scripts
+> [!IMPORTANT]
+> The server binds to `127.0.0.1` by default, so it is reachable only from the local machine. Set `HOST=0.0.0.0` to accept remote connections, and set `API_KEY` whenever you do: without it, the server runs in open mode.
+
+### Docker
+
+A prebuilt image is published to the GitHub Container Registry. It already binds to `0.0.0.0`:
 
 ```bash
-# Start in HTTP mode (production)
-npm run start:http
-
-# Development with auto-reload in HTTP mode
-npm run dev:http
-```
-
-### Docker Deployment
-
-The server can be easily deployed using Docker.
-
-#### Using Pre-built Image from GitHub Container Registry (Recommended)
-
-Pull and run the official image:
-
-```bash
-# Pull the latest image
-docker pull ghcr.io/cmer81/open-meteo-mcp:latest
-
-# Run the container
-docker run -d \
-  --name open-meteo-mcp \
-  -p 3000:3000 \
+docker run -d --name open-meteo-mcp -p 3000:3000 \
+  -e API_KEY=your-secret-key \
   ghcr.io/cmer81/open-meteo-mcp:latest
-
-# Check health
-curl http://localhost:3000/health
 ```
 
-Available tags (no `v` prefix — the git tag `v2.0.0` publishes the image as `2.0.0`):
-- `latest` - Latest stable release
-- `2.0.0` - Specific version
-- `2.0` - Latest 2.0.x release
-- `2` - Latest 2.x.x release
+Tags follow the npm version without the `v` prefix: `latest`, `2.5.1`, `2.5`, `2`.
 
-#### Using Docker Compose
+The repository also has `docker-compose.yml` (prebuilt image) and `docker-compose.dev.yml` (builds from source). Copy `.env.example` to `.env` to configure them.
 
-The repository includes two Docker Compose configurations:
+### claude.ai traffic
 
-**Production (uses pre-built image):**
-```bash
-# Start with pre-built image from GitHub Container Registry
-docker compose up -d
+Every claude.ai user reaches a remote server from Anthropic's outbound range `160.79.104.0/21`. That range gets its own rate-limit pool (`RATE_LIMIT_ANTHROPIC_RPM`) so they don't all share one per-IP budget. Behind a reverse proxy, list the proxy in `TRUSTED_PROXIES` so the real client IP is seen.
 
-# View logs
-docker compose logs -f
+## Configuration
 
-# Stop the server
-docker compose down
-```
+All variables are optional.
 
-**Development (builds from source):**
-```bash
-# Build and start from local source
-docker compose -f docker-compose.dev.yml up -d
+### Server
 
-# Rebuild after code changes
-docker compose -f docker-compose.dev.yml up -d --build
-```
+| Variable | Default | Description |
+|---|---|---|
+| `TRANSPORT` | stdio | `http` for Streamable HTTP |
+| `PORT` | `3000` | HTTP port |
+| `HOST` | `127.0.0.1` | Interface to bind. `0.0.0.0` accepts remote connections |
+| `OPEN_METEO_CACHE_MAX_BYTES` | `20000000` | Response cache size, in bytes of serialized JSON. `0` disables it |
 
-#### Building from Source
+The cache keeps forecasts and ensembles for 15 minutes, air quality and marine for 30 minutes, flood for 1 hour, seasonal for 6 hours, archive and climate for 24 hours, geocoding for 7 days and elevation for 30 days. Archive ranges ending within the last 5 days are kept for 1 hour only, since Open-Meteo is still backfilling them. Failed requests are never cached.
 
-If you prefer to build the image yourself:
+> [!NOTE]
+> The cache counts serialized JSON, but the parsed objects in memory take about 1.2 to 2.6 times as much. A full cache at the default size costs about 50 MB of heap.
 
-```bash
-# Build the image
-npm run docker:build
-# or
-docker build -t open-meteo-mcp-server .
+### HTTP security
 
-# Run the container
-npm run docker:run
-# or
-docker run -p 3000:3000 open-meteo-mcp-server
-```
+| Variable | Default | Description |
+|---|---|---|
+| `API_KEY` | unset (open) | Key required on every `/mcp` request |
+| `RATE_LIMIT_RPM` | `60` | Requests per minute per client IP. IPv6 clients are grouped by /56 |
+| `RATE_LIMIT_ANTHROPIC_RPM` | `600` | Requests per minute shared by all claude.ai traffic |
+| `TRUSTED_PROXIES` | unset | Comma-separated IPs or CIDRs whose `X-Forwarded-For` is trusted |
+| `ALLOWED_ORIGINS` | empty | Comma-separated browser origins allowed. Any request with an unlisted `Origin` header gets `403` (DNS rebinding protection). Requests without one are unaffected |
 
-#### Environment Configuration
+### Custom Open-Meteo instance
 
-Copy `.env.example` to `.env` and customize as needed:
+Each endpoint can be redirected, for example to a [self-hosted Open-Meteo](https://github.com/open-meteo/open-meteo):
 
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
+| Variable | Default |
+|---|---|
+| `OPEN_METEO_API_URL` | `https://api.open-meteo.com` |
+| `OPEN_METEO_ARCHIVE_API_URL` | `https://archive-api.open-meteo.com` |
+| `OPEN_METEO_AIR_QUALITY_API_URL` | `https://air-quality-api.open-meteo.com` |
+| `OPEN_METEO_MARINE_API_URL` | `https://marine-api.open-meteo.com` |
+| `OPEN_METEO_SEASONAL_API_URL` | `https://seasonal-api.open-meteo.com` |
+| `OPEN_METEO_ENSEMBLE_API_URL` | `https://ensemble-api.open-meteo.com` |
+| `OPEN_METEO_GEOCODING_API_URL` | `https://geocoding-api.open-meteo.com` |
+| `OPEN_METEO_FLOOD_API_URL` | `https://flood-api.open-meteo.com` |
+| `OPEN_METEO_CLIMATE_API_URL` | `https://climate-api.open-meteo.com` |
 
-Then update `docker-compose.yml` to use the `.env` file or pass environment variables directly.
-
-#### Health Check
-
-The HTTP server includes a health check endpoint:
-
-```bash
-curl http://localhost:3000/health
-# Response: {"status":"ok"}
-```
-
-This endpoint is used by Docker's `HEALTHCHECK` and can be integrated with container orchestration platforms (Kubernetes, Docker Swarm, etc.).
-
-### Environment Variables
-
-All environment variables are optional and have sensible defaults:
-
-- `OPEN_METEO_API_URL` - Base URL for Open-Meteo forecast API (default: https://api.open-meteo.com)
-- `OPEN_METEO_AIR_QUALITY_API_URL` - Air quality API URL (default: https://air-quality-api.open-meteo.com)
-- `OPEN_METEO_MARINE_API_URL` - Marine weather API URL (default: https://marine-api.open-meteo.com)
-- `OPEN_METEO_ARCHIVE_API_URL` - Historical data API URL (default: https://archive-api.open-meteo.com)
-- `OPEN_METEO_SEASONAL_API_URL` - Seasonal forecast API URL (default: https://seasonal-api.open-meteo.com)
-- `OPEN_METEO_ENSEMBLE_API_URL` - Ensemble forecast API URL (default: https://ensemble-api.open-meteo.com)
-- `OPEN_METEO_GEOCODING_API_URL` - Geocoding API URL (default: https://geocoding-api.open-meteo.com)
-- `OPEN_METEO_FLOOD_API_URL` - Flood forecast API URL (default: https://flood-api.open-meteo.com)
-- `OPEN_METEO_CLIMATE_API_URL` - Climate projection API URL (default: https://climate-api.open-meteo.com)
-- `OPEN_METEO_CACHE_MAX_BYTES` - Size cap for the in-memory response cache (default: `20000000`). Set to `0` to disable caching. The cap counts **serialized JSON**; the parsed objects held in memory retain roughly 1.2-2.6x that depending on payload shape, so a full cache at the default costs about 50 MB of heap. Identical requests are served from the cache until their per-endpoint TTL expires: 15 minutes for forecasts and ensembles, 30 minutes for air quality and marine, 1 hour for flood, 6 hours for seasonal, 24 hours for archive (1 hour when the range ends within the last 5 days, which the archive is still backfilling) and climate, 7 days for geocoding, 30 days for elevation.
-- `TRANSPORT` - Transport mode: `http` for Streamable HTTP, omit for stdio (default: stdio)
-- `PORT` - HTTP server port when using HTTP transport (default: 3000)
-- `HOST` - Interface the HTTP transport binds to (default: `127.0.0.1`, loopback only). Set to `0.0.0.0` to accept connections from other machines. The Docker image sets this to `0.0.0.0` already, so published ports work out of the box.
-
-#### HTTP Transport Security (optional)
-
-- `API_KEY` - When set, all requests to `/mcp` must include this key via `Authorization: Bearer <key>` or `X-API-Key: <key>`. Leave unset for open access (local/dev mode). Enforced on `GET`, `POST` and `DELETE` alike.
-- `RATE_LIMIT_RPM` - Maximum requests per minute per IP (default: `60`). IPv6 clients are grouped by /56. HTTP transport only.
-- `RATE_LIMIT_ANTHROPIC_RPM` - Maximum requests per minute for Anthropic's outbound range (`160.79.104.0/21`), shared by all claude.ai users, who all reach the server from it (default: `600`). Behind a reverse proxy, list it in `TRUSTED_PROXIES` so the real client IP is seen. HTTP transport only.
-- `TRUSTED_PROXIES` - Comma-separated list of trusted proxy IPs or CIDR ranges (e.g. `10.0.0.0/8,172.16.0.0/12`). When set, `X-Forwarded-For` is honoured only for requests originating from these addresses. Leave unset to always use the direct connection IP.
-- `ALLOWED_ORIGINS` - Comma-separated list of browser origins permitted to reach the server (e.g. `http://localhost:5173,https://app.example`). Protects against DNS rebinding: any request carrying an `Origin` header that is not listed is rejected with `403`. Requests without an `Origin` header — CLI clients and SDK transports — are unaffected. Empty by default.
-
-`/health` stays reachable without a key and without rate limiting, so container probes keep working.
+In Claude Desktop, pass them through the `env` key of the server entry.
 
 ## Skills
 
-The `skills/` directory contains SKILL.md files that help AI assistants use this MCP server effectively. They act as contextual guides — the AI reads the relevant skill to know which tool to call and how to use its parameters.
+The `skills/` directory holds two `SKILL.md` guides that help an assistant pick the right tool and parameters:
 
-### Available skills
+| Skill | Best for |
+|---|---|
+| [`open-meteo`](skills/open-meteo/SKILL.md) | Everyday weather: forecasts, history, air quality, marine, elevation |
+| [`open-meteo-advanced`](skills/open-meteo-advanced/SKILL.md) | Specific models, ensemble uncertainty, seasonal outlooks, climate projections |
 
-| Skill | File | Best for |
-|-------|------|----------|
-| `open-meteo` | `skills/open-meteo/SKILL.md` | Everyday weather: forecasts, historical data, air quality, marine conditions, elevation |
-| `open-meteo-advanced` | `skills/open-meteo-advanced/SKILL.md` | Specific models (ECMWF, GFS, DWD ICON…), ensemble uncertainty, seasonal outlooks, climate projections |
-
-### Using with Claude Code (CLI)
-
-Copy the skill(s) to your Claude skills directory:
+For Claude Code, copy them to `~/.claude/skills/`:
 
 ```bash
-cp -r skills/open-meteo ~/.claude/skills/
-cp -r skills/open-meteo-advanced ~/.claude/skills/
+cp -r skills/open-meteo skills/open-meteo-advanced ~/.claude/skills/
 ```
 
-This installs them at `~/.claude/skills/open-meteo/SKILL.md` and `~/.claude/skills/open-meteo-advanced/SKILL.md`. Claude Code will load the relevant skill automatically when you ask weather-related questions.
+For Claude Desktop, upload the relevant `SKILL.md` into the conversation.
 
-### Using with Claude Desktop
-
-Upload the SKILL.md file directly as a document in your Claude Desktop conversation:
-- For everyday weather questions: upload `skills/open-meteo/SKILL.md`
-- For model selection, ensemble, or climate projections: upload `skills/open-meteo-advanced/SKILL.md`
-
-Upload one skill per conversation. The AI will use it as a reference guide throughout the session.
-
-## Usage Examples
-
-### Geocoding and Location Search
-```
-Find the coordinates for Paris, France
-```
-
-```
-Search for locations named "Berlin" and return the top 5 results
-```
-
-```
-What are the coordinates for postal code 75001?
-```
-
-```
-Search for "Lyon" in France only (countryCode: FR) with results in French (language: fr)
-```
-
-```
-Find all cities named "London" in the United Kingdom with English descriptions
-```
-
-### Basic Weather Forecast
-```
-Can you get me the weather forecast for Paris (48.8566, 2.3522) with temperature, humidity, and precipitation for the next 3 days?
-```
-
-### Historical Weather Data
-```
-What were the temperatures in London during January 2023?
-```
-
-### Air Quality Monitoring
-```
-What's the current air quality in Beijing with PM2.5 and ozone levels?
-```
-
-```
-Give me the current European AQI, UV index, and pollen levels (birch, grass, ragweed) in Paris.
-```
-
-### Marine Weather
-```
-Get me the wave height and sea surface temperature for coordinates 45.0, -125.0 for the next 5 days.
-```
-
-### Flood Monitoring
-```
-Check the river discharge forecast for coordinates 52.5, 13.4 for the next 30 days.
-```
-
-### Seasonal Forecast
-```
-Give me the weekly and monthly temperature outlook for Madrid over the next 4 months.
-```
-
-### Ensemble Forecast
-```
-Compare the ICON and GFS ensemble forecasts for Berlin over the next 5 days and show the spread across members.
-```
-
-### Climate Projections
-```
-Show me temperature projections for New York from 2050 to 2070 using CMIP6 models.
-```
-
-## API Parameters
-
-### Required Parameters
-- `latitude` : Latitude in WGS84 coordinate system (-90 to 90)
-- `longitude` : Longitude in WGS84 coordinate system (-180 to 180)
-
-### Hourly Weather Variables
-- `temperature_2m` : Temperature at 2 meters
-- `relative_humidity_2m` : Relative humidity
-- `precipitation` : Precipitation
-- `wind_speed_10m` : Wind speed at 10 meters
-- `wind_direction_10m` : Wind direction
-- `pressure_msl` : Mean sea level pressure
-- `cloud_cover` : Cloud cover percentage
-- `weather_code` : Weather condition code
-- `visibility` : Visibility
-- `uv_index` : UV index
-- And many more...
-
-### Daily Weather Variables
-- `temperature_2m_max/min` : Maximum/minimum temperatures
-- `precipitation_sum` : Total precipitation
-- `wind_speed_10m_max` : Maximum wind speed
-- `sunrise/sunset` : Sunrise and sunset times
-- `weather_code` : Weather condition code
-- `uv_index_max` : Maximum UV index
-
-### Air Quality Variables
-- `pm10` : PM10 particles
-- `pm2_5` : PM2.5 particles
-- `carbon_monoxide` : Carbon monoxide
-- `nitrogen_dioxide` : Nitrogen dioxide
-- `ozone` : Ozone
-- `sulphur_dioxide` : Sulfur dioxide
-- `ammonia` : Ammonia
-- `dust` : Dust particles
-- `alder_pollen` : Alder pollen (Europe only)
-- `birch_pollen` : Birch pollen (Europe only)
-- `grass_pollen` : Grass pollen (Europe only)
-- `mugwort_pollen` : Mugwort pollen (Europe only)
-- `olive_pollen` : Olive pollen (Europe only)
-- `ragweed_pollen` : Ragweed pollen (Europe only)
-- `european_aqi` : European Air Quality Index
-- `european_aqi_pm2_5` : European AQI for PM2.5
-- `european_aqi_pm10` : European AQI for PM10
-- `european_aqi_nitrogen_dioxide` : European AQI for NO₂
-- `european_aqi_ozone` : European AQI for ozone
-- `european_aqi_sulphur_dioxide` : European AQI for SO₂
-- `us_aqi` : US Air Quality Index
-- `us_aqi_pm2_5` : US AQI for PM2.5
-- `us_aqi_pm10` : US AQI for PM10
-- `us_aqi_nitrogen_dioxide` : US AQI for NO₂
-- `us_aqi_ozone` : US AQI for ozone
-- `us_aqi_sulphur_dioxide` : US AQI for SO₂
-- `us_aqi_carbon_monoxide` : US AQI for CO
-- `uv_index` : UV index
-- `uv_index_clear_sky` : UV index under clear sky conditions
-
-### Marine Weather Variables
-- `wave_height` : Wave height
-- `wave_direction` : Wave direction
-- `wave_period` : Wave period
-- `wind_wave_height` : Wind wave height
-- `swell_wave_height` : Swell wave height
-- `sea_surface_temperature` : Sea surface temperature
-
-### Formatting Options
-- `temperature_unit` : `celsius`, `fahrenheit`
-- `wind_speed_unit` : `kmh`, `ms`, `mph`, `kn`
-- `precipitation_unit` : `mm`, `inch`
-- `timezone` : `Europe/Paris`, `America/New_York`, etc.
-
-### Time Range Options
-- `forecast_days` : Number of forecast days (varies by API)
-- `past_days` : Include past days data
-- `start_date` / `end_date` : Date range for historical data (YYYY-MM-DD format)
-
-## Development Scripts
+## Development
 
 ```bash
-# Development with auto-reload
-npm run dev
-
-# Build TypeScript
+git clone https://github.com/cmer81/open-meteo-mcp.git
+cd open-meteo-mcp
+npm install
 npm run build
-
-# Start production server
-npm start
-
-# Run tests
-npm test
-
-# Type checking
-npm run typecheck
-
-# Linting
-npm run lint
 ```
 
-## Evaluations
+| Command | Description |
+|---|---|
+| `npm run dev` / `npm run dev:http` | Run from source with auto-reload (stdio / HTTP) |
+| `npm test` | Unit tests (network mocked) |
+| `npm run typecheck` / `npm run lint` | Type checking and Biome linting |
+| `npm run smoke` | Calls all 17 tools against the live API through a real MCP client. Needs a prior build |
+| `npm run eval` | LLM-usability benchmark, see below |
 
-The `evals/` directory holds an LLM-usability benchmark for this server's tools — a different check than `npm test`. Unit tests verify the code is correct; this verifies that an LLM given *only* this server's tools (no other context) can actually complete realistic tasks with them.
+To point Claude Desktop at your local build, use `"command": "node"` with `"args": ["/path/to/open-meteo-mcp/dist/index.js"]`.
 
-- `evals/evaluation.xml` — 14 independent, read-only question/answer pairs built on stable historical data (ERA5 archive, CMIP6 projections, geocoding, elevation), so the expected answers never change over time. The first 10 name the tool to use; the last 4 do not, so they also check tool choice and local-time handling (what the server instructions steer).
-- `evals/scripts/evaluation.py` — harness that launches the server, lets an agent answer each question using only its tools, and compares the answer against the expected one.
+### Evaluations
 
-### Running the evaluation
+`evals/evaluation.xml` checks whether an LLM given *only* this server's tools can answer realistic questions. Its 14 questions rely on stable data (ERA5 archive, CMIP6 projections, geocoding, elevation), so the expected answers don't drift.
 
 ```bash
-npm run build
 pip install -r evals/scripts/requirements.txt
-echo 'ANTHROPIC_API_KEY=your_api_key_here' >> .env   # or export it; .env is gitignored
+export ANTHROPIC_API_KEY=...        # or put it in .env
 
-npm run eval
-# baseline without the server's instructions, to measure their effect:
-npm run eval -- --no-server-instructions
-# other model or report file:
-npm run eval -- -m claude-opus-5-5 -o eval-report.md
+npm run build && npm run eval
+npm run eval -- --no-server-instructions   # baseline without the server instructions
 ```
 
-The harness passes the server's initialize-time `instructions` to the model in the system prompt, as MCP clients do. `TRANSPORT=stdio` is forced for the server it launches, so a `.env` copied from `.env.example` (which sets `TRANSPORT=http`) does not make it listen on HTTP instead.
-
-This calls the real Anthropic API for every question, so it consumes tokens/credits — it's a manual quality check for tool design, not part of CI.
-
-When adding, removing, or renaming a tool, or materially changing a tool's description or schema, consider adding or updating a `qa_pair` in `evals/evaluation.xml` that exercises it.
-
-## Project Structure
-
-```
-src/
-├── index.ts          # MCP server entry point
-├── client.ts         # HTTP client for Open-Meteo API
-├── tools.ts          # MCP tool definitions
-├── types.ts          # Zod validation schemas
-├── truncation.ts     # Response size capping and serialization
-└── security.ts       # Auth, origin validation, rate limiter, IP extraction
-```
-
-## API Coverage
-
-This server provides access to all major Open-Meteo endpoints:
-
-### Weather Data
-- Current weather conditions
-- Hourly forecasts (up to 16 days)
-- Daily forecasts (up to 16 days)
-- Historical weather data (1940-present)
-
-### Specialized Models
-- High-resolution regional models (DWD ICON, Météo-France AROME)
-- Global models (NOAA GFS, ECMWF)
-- Regional specialists (JMA for Asia, MET Norway for Nordics)
-
-### Environmental Data
-- Air quality forecasts
-- Marine and ocean conditions
-- River discharge and flood warnings
-- Climate change projections
-
-### Advanced Features
-- Ensemble forecasts for uncertainty quantification
-- Seasonal forecasts for long-term planning
-- Multiple model comparison
-- Customizable units and timezones
-
-## Error Handling
-
-The server provides comprehensive error handling with detailed error messages for:
-- Invalid coordinates
-- Missing required parameters
-- API rate limits
-- Network connectivity issues
-- Invalid date ranges
-
-### Response Size Limits
-
-Tool responses are capped at 25,000 characters so a single wide query cannot overflow an LLM's context. When a response exceeds the limit, the time-series arrays (`hourly`, `daily`, `minutely_15`) are shortened by an equal ratio — keeping every parallel series aligned on the same timestamps — and two fields are added:
-
-```json
-{
-  "truncated": true,
-  "truncation_message": "Response truncated from 95538 characters to stay within the 25000-character limit. Narrow the request (start_date/end_date, forecast_days, past_days, or fewer variables) to retrieve the full data."
-}
-```
-
-To get complete data, narrow the request: shorter date range, fewer `forecast_days`/`past_days`, or fewer variables.
-
-## Performance
-
-- Efficient HTTP client with connection pooling
-- Optimized data serialization
-- Minimal memory footprint
-
-## API Documentation
-
-For detailed API documentation, refer to the `openapi.yml` file and the [Open-Meteo API documentation](https://open-meteo.com/en/docs).
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-### Development Setup
-
-1. Fork the repository
-2. Clone your fork: `git clone https://github.com/your-username/open-meteo-mcp.git`
-3. Install dependencies: `npm install`
-4. Create a feature branch: `git checkout -b feature/amazing-feature`
-5. Make your changes and add tests
-6. Run tests: `npm test`
-7. Commit your changes: `git commit -m 'Add amazing feature'`
-8. Push to the branch: `git push origin feature/amazing-feature`
-9. Open a Pull Request
-
-### Releasing
-
-This project uses automated releases via GitHub Actions. To create a new release:
-
-```bash
-# For a patch release (1.0.0 -> 1.0.1)
-npm run release:patch
-
-# For a minor release (1.0.0 -> 1.1.0)
-npm run release:minor
-
-# For a major release (1.0.0 -> 2.0.0)
-npm run release:major
-```
-
-The GitHub Action will automatically:
-- Run tests and build the project
-- Publish to npm with provenance
-- Create a GitHub release
-- Update version badges
-
-## License
-
-MIT
+> [!WARNING]
+> The evaluation calls the real Anthropic API for every question and consumes credits. It is a manual check, not part of CI.
