@@ -145,6 +145,16 @@ describe('Fix 3: EnsembleModelsSchema accepts a single model or an array of mode
     });
     expect(result.success).toBe(false);
   });
+
+  it('should reject an empty models array (serializes to an empty `models=`)', () => {
+    const result = EnsembleParamsSchema.safeParse({
+      latitude: 48.8566,
+      longitude: 2.3522,
+      models: [],
+      hourly: ['temperature_2m'],
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe('Fix 5: EnsembleModelsSchema correct API model names', () => {

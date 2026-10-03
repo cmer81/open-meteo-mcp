@@ -86,7 +86,8 @@ export const ENSEMBLE_FORECAST_TOOL: ToolDefinition = {
   name: 'ensemble_forecast',
   title: 'Ensemble Forecast',
   annotations: READ_ONLY_ANNOTATIONS,
-  description: 'Get ensemble forecasts showing forecast uncertainty with multiple model runs.',
+  description:
+    'Get ensemble forecasts showing forecast uncertainty with multiple model runs. `models` is required: the ensemble API has no default model (e.g. "icon_seamless_eps", "ncep_gefs_seamless", "ecmwf_ifs025_ensemble").',
 };
 
 export const GEOCODING_TOOL: ToolDefinition = {

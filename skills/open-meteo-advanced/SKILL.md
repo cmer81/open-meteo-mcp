@@ -74,7 +74,7 @@ All share the same parameters as `weather_forecast` (see `open-meteo` skill), pl
 | Parameter | Required | Notes |
 |-----------|----------|-------|
 | `latitude`, `longitude` | Yes | |
-| `models` | No | One ensemble model, or an array of models to compare several ensemble systems in one call |
+| `models` | **Yes** | One ensemble model (e.g. `icon_seamless_eps`, `ncep_gefs_seamless`, `ecmwf_ifs025_ensemble`), or an array of models to compare several ensemble systems in one call. The ensemble API has no default model: omitting it fails |
 | `hourly` | No* | Same variables as `weather_forecast` |
 | `forecast_days` | No | 0–36, default 7 |
 | `past_days` / `past_hours` | No | Recent history, day or hour granularity |
@@ -143,7 +143,7 @@ Output represents **ensemble anomalies relative to climatology**, not absolute f
 
 **"Show me forecast uncertainty for Paris next week"**
 1. `geocoding` with `name: "Paris"` → coordinates
-2. `ensemble_forecast` with coordinates + `hourly: ["temperature_2m"]`, `forecast_days: 10`
+2. `ensemble_forecast` with coordinates + `models: "ecmwf_ifs025_ensemble"`, `hourly: ["temperature_2m"]`, `forecast_days: 10`
    The response will contain `temperature_2m_member01`, `temperature_2m_member02`, etc. — calculate spread across members for uncertainty.
 
 **"What will the climate be like in Lyon in 2040?"**

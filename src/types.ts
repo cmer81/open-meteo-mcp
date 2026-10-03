@@ -525,9 +525,11 @@ const EnsembleModelEnum = z.enum([
 // The live /v1/ensemble API accepts a comma-separated list of models (verified),
 // so this accepts either a single model or an array of models.
 // Required: with no `models`, /v1/ensemble falls back to best_match and rejects
-// the request ("Model 'best_match' is not supported by the Ensemble API").
+// the request ("Model 'best_match' is not supported by the Ensemble API"). An
+// empty array is rejected too: it serializes to `models=`, which the API answers
+// with a misleading "No data is available for this location".
 export const EnsembleModelsSchema = z
-  .union([EnsembleModelEnum, z.array(EnsembleModelEnum)])
+  .union([EnsembleModelEnum, z.array(EnsembleModelEnum).min(1)])
   .describe(
     'Required: the ensemble API has no default model. Use e.g. "icon_seamless_eps" or "ncep_gefs_seamless".',
   );
