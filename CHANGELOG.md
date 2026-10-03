@@ -8,6 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [2.5.2] - 2026-10-03
+
+### Changed
+
+- `dotenv` 17.4.2 → 18.0.5. Its startup message now goes to stderr instead of
+  stdout, so it can no longer end up in the stdio transport's protocol stream.
+- `@modelcontextprotocol/sdk` 1.30.0 → 1.31.0, plus development tooling.
+- **The Docker image is published only after the npm release succeeds.** The
+  image and the npm package used to be built by two independent workflows on
+  the same tag, so an image could ship from a tag whose tests, audit or npm
+  publish had failed. The release also stops when the tag does not match the
+  `package.json` version.
+
+### Documentation
+
+- README rewritten.
+
 ## [2.5.1] - 2026-10-03
 
 ### Fixed
@@ -347,6 +364,7 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[2.5.2]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.1...v2.5.2
 [2.5.1]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/cmer81/open-meteo-mcp/compare/v2.4.1...v2.4.2
