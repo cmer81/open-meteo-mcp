@@ -19,6 +19,8 @@ jobs:
 
     strategy:
       matrix:
+        # Each version is a required check ("test (22)", ...) in the `main`
+        # ruleset: update the ruleset when changing this list, or PRs block.
         node-version: [22, 24, 26]
 
     steps:
