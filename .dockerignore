@@ -21,7 +21,6 @@ dist/
 
 # Claude/MCP
 .claude/
-.agents/
 .mcp.json
 
 # Tests
