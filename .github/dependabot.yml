@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # Minor/patch bumps in one PR; majors stay separate so they get reviewed.
+      # Upgrades of @modelcontextprotocol/sdk or zod need `npm run build && npm run smoke` (see AGENTS.md).
+      npm-minor-patch:
+        update-types: [minor, patch]

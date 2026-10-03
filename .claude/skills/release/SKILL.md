@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 # Releasing
 
-**Never run `npm publish` locally** — publishing is automated and a version number is burned permanently once used. `.github/workflows/release.yml` triggers on any `v*` tag and runs `npm ci` → `npm test` → `npm run build` → `npm audit` → `npm publish --provenance`, then creates the GitHub release.
+**Never run `npm publish` locally** — publishing is automated and a version number is burned permanently once used. `.github/workflows/release.yml` triggers on any `v*` tag, fails if the tag does not match the `package.json` version, then runs `npm ci` → `npm test` → `npm run build` → `npm audit` → `npm publish --provenance`, creates the GitHub release, and only then builds and pushes the Docker image to GHCR.
 
 ## 1. Pre-release verification
 
