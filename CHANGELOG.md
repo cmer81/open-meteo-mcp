@@ -8,6 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [2.5.3] - 2026-10-17
+
+### Security
+
+- `express` 5.2.1 → 5.3.0. It pulls in `qs` 6.16 (CVE-2026-2391,
+  CVE-2026-82417, CVE-2026-82562: `arrayLimit` bypasses and a denial of
+  service) and `proxy-addr` 2.0.8 (CVE-2026-90711), which the HTTP transport
+  uses to resolve the client IP behind a trusted proxy. stdio-only setups were
+  not exposed.
+
+### Changed
+
+- `@modelcontextprotocol/sdk` 1.31.0 → 1.32.1, `zod` 4.6.5 → 4.6.7, `dotenv`
+  18.0.5 → 18.0.8, `express-rate-limit` 8.7.0 → 8.7.1, plus development
+  tooling.
+
 ## [2.5.2] - 2026-10-03
 
 ### Changed
@@ -364,6 +380,7 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[2.5.3]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.2...v2.5.3
 [2.5.2]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.1...v2.5.2
 [2.5.1]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/cmer81/open-meteo-mcp/compare/v2.4.2...v2.5.0
