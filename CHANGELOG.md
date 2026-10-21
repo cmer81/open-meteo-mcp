@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [2.5.4] - 2026-10-21
+
+### Security
+
+- `follow-redirects` 1.16.0 → 1.16.1 (GHSA-q3jh-wrc6-jgq8,
+  GHSA-8r9p-f939-6h3c: credential headers could survive a cross-origin
+  redirect). Axios uses it for every request to the Open-Meteo APIs; the
+  server sends no credentials to them, so the practical exposure was low.
+- `hono` 4.13.8 → 4.13.13 (GHSA-5r4p-p66f-jhc7: `serveStatic` middleware
+  bypass). Transitive dependency; the server does not use `serveStatic`.
+- Node.js shipped security releases the same day (22.23.4, 24.22.1, 26.12.1),
+  including a Brotli decoder flaw and TLS hostname-check bypasses. They are
+  fixed in the runtime, not in this package: upgrade Node.js, and pull a fresh
+  `node:22-alpine` base when building the Docker image yourself.
+
 ## [2.5.3] - 2026-10-17
 
 ### Security
@@ -380,6 +395,7 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[2.5.4]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.3...v2.5.4
 [2.5.3]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.2...v2.5.3
 [2.5.2]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.1...v2.5.2
 [2.5.1]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.0...v2.5.1
