@@ -8,6 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [2.5.5] - 2026-10-27
+
+### Security
+
+- `body-parser` 2.3.0 → 2.4.0 (GHSA-27r3-jxmh-p828: denial of service via
+  trailing bytes after a compressed request body). Express uses it to parse
+  request bodies on the HTTP transport; stdio is not affected. Pulls in `qs`
+  6.17.0.
+- `ip-address` 10.7.2 → 10.7.5 (GHSA-rxp7-6hxx-x8q5: quadratic-time parsing
+  of an IPv6 zone identifier). Used by `express-rate-limit` on the HTTP
+  transport.
+- `fast-uri` 3.1.8 → 3.1.9 (GHSA-w74x-v6f9-j3xg, GHSA-xhq7-xmqj-769h,
+  GHSA-wjr9-j795-jxcr, GHSA-333x-w4r6-6crp: URI scheme, host and path
+  normalization flaws). Transitive dependency of the MCP SDK via `ajv`.
+
+### Changed
+
+- `@modelcontextprotocol/sdk` 1.32.1 → 1.32.2, `dotenv` 18.0.8 → 18.0.9.
+
 ## [2.5.4] - 2026-10-21
 
 ### Security
@@ -395,6 +414,7 @@ Claude Desktop) or the Docker image, no action is required.
   it, truncation must measure the text as emitted, and `.refine()` yields a
   `ZodEffects` the SDK cannot introspect.
 
+[2.5.5]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.4...v2.5.5
 [2.5.4]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.3...v2.5.4
 [2.5.3]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.2...v2.5.3
 [2.5.2]: https://github.com/cmer81/open-meteo-mcp/compare/v2.5.1...v2.5.2
