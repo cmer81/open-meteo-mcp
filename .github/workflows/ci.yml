@@ -7,14 +7,21 @@ on:
     branches: [ main, develop ]
   # Allow manual trigger for any branch
   workflow_dispatch:
+  # Daily audit of main: catches advisories published between two PRs.
+  # A failure emails the repo owner.
+  schedule:
+    - cron: '17 6 * * *'
 
-# Cancel outdated runs for the same PR/branch
+# Cancel outdated runs for the same PR/branch. The event name keeps the
+# scheduled audit and a push to main from cancelling each other.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   test:
+    # The scheduled run only re-audits main; the code itself has not changed.
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
 
     strategy:
