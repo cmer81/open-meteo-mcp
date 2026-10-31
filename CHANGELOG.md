@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [2.5.6] - 2026-11-01
+
+### Security
+
+- `follow-redirects` 1.16.1 → 1.16.2 (GHSA-mrwp-f3q8-3g9p, high).
+  Transitive dependency of `axios`, used for every Open-Meteo API call.
+- `@hono/node-server` 2.1.1 → 2.1.5 (GHSA-rmxm-3fg6-px4f, moderate).
+  Transitive dependency of the MCP SDK.
+
+### Changed
+
+- `axios` 1.20.0 → 1.21.0.
+
 ## [2.5.5] - 2026-10-27
 
 ### Security
