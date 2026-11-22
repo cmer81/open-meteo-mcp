@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Releases before 2.0.0 predate this file; see the
 [GitHub releases](https://github.com/cmer81/open-meteo-mcp/releases) for their notes.
 
+## [2.5.7] - 2026-11-23
+
+### Security
+
+- `hono` 4.13.13 → 4.13.18 (GHSA-46wx-v44x-9hh2, GHSA-4h7h-rv7c-7m2v,
+  GHSA-4m76-xfj5-7975, GHSA-h7mg-cq63-vhpq, moderate; GHSA-3gg2-335m-rxc6,
+  low). Transitive dependency of the MCP SDK; the server does not use hono
+  directly (the HTTP transport runs on Express).
+- `@hono/node-server` 2.1.5 → 2.1.8 (GHSA-jpvv-r467-5p4w, moderate).
+  Transitive dependency of the MCP SDK.
+
+### Changed
+
+- `axios` 1.21.0 → 1.21.1, `dotenv` 18.0.9 → 18.0.10, `express-rate-limit`
+  8.7.1 → 8.7.4.
+- CI: daily `npm audit` of `main` and auto-merge of Dependabot patch/minor
+  updates.
+
 ## [2.5.6] - 2026-11-01
 
 ### Security
